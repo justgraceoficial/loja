@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teste de conexão — Just Grace</title>
+<style>
+  body{ font-family: -apple-system, sans-serif; background:#111; color:#eee; padding:24px; }
+  button{ display:block; width:100%; padding:16px; margin:10px 0; font-size:16px; background:#f3ede1; border:none; border-radius:6px; }
+  pre{ background:#000; color:#0f0; padding:14px; white-space:pre-wrap; word-break:break-all; border-radius:6px; font-size:13px; }
+  h3{ margin-top:24px; }
+</style>
+</head>
+<body>
+<h2>Teste de conexão com o Apps Script</h2>
+<p>URL testada:<br><code id="urlShown" style="font-size:12px;"></code></p>
+
+<button onclick="testarGET()">1. Testar GET (buscar produtos)</button>
+<button onclick="testarXHR_GET()">2. Testar GET via XHR</button>
+<button onclick="testarPOST()">3. Testar POST</button>
+
+<h3>Resultado:</h3>
+<pre id="out">(clique em um botão acima)</pre>
+
+<script>
+const API = 'https://script.google.com/macros/s/AKfycbxOSaSq5sm5Bv-_Fb73e5ti63KWdHWBWgNs0eZJYAThdgDK3sdESYMdFTrQ_nkbfyVtZw/exec';
+const TOKEN = 'jgSec9rX4mNqT2wZ';
+document.getElementById('urlShown').textContent = API;
+
+function log(msg){
+  document.getElementById('out').textContent = msg;
+}
+
+async function testarGET(){
+  log('Testando com fetch()...');
+  try{
+    const res = await fetch(API + '?token=' + TOKEN + '&type=products');
+    const text = await res.text();
+    log('SUCESSO (fetch)\nStatus: ' + res.status + '\n\n' + text.slice(0, 500));
+  }catch(err){
+    log('ERRO (fetch)\n\nNome: ' + err.name + '\nMensagem: ' + err.message + '\n\n' + (err.stack || ''));
+  }
+}
+
+function testarXHR_GET(){
+  log('Testando com XMLHttpRequest...');
+  const xhr = new XMLHttpRequest();
+  xhr.open('GET', API + '?token=' + TOKEN + '&type=products', true);
+  xhr.onload = function(){
+    log('SUCESSO (XHR)\nStatus: ' + xhr.status + '\n\n' + xhr.responseText.slice(0, 500));
+  };
+  xhr.onerror = function(e){
+    log('ERRO (XHR)\nStatus: ' + xhr.status + '\nreadyState: ' + xhr.readyState + '\n\nIsso geralmente é bloqueio de CORS ou rede.');
+  };
+  xhr.ontimeout = function(){
+    log('TIMEOUT (XHR) — demorou demais pra responder.');
+  };
+  xhr.timeout = 15000;
+  try{
+    xhr.send();
+  }catch(err){
+    log('ERRO ao enviar (XHR)\n' + err.message);
+  }
+}
+
+async function testarPOST(){
+  log('Testando POST...');
+  try{
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ token: TOKEN, type: 'waitlist', waitlist: [] })
+    });
+    const text = await res.text();
+    log('SUCESSO (POST)\nStatus: ' + res.status + '\n\n' + text.slice(0, 500));
+  }catch(err){
+    log('ERRO (POST)\n\nNome: ' + err.name + '\nMensagem: ' + err.message);
+  }
+}
+</script>
+</body>
+</html>
