@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acompanhar pedido — Just Grace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#070706; --charcoal:#111110; --panel:#161513;
+    --panel-line: rgba(243,237,225,0.14);
+    --gold: #b9ae98; --gold-bright: #f3ede1; --ivory: #f3ede1;
+    --muted: #948d80; --faint: #57534a;
+    --ok: #8fb08a; --danger: #c9776f;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    background: var(--void); color: var(--ivory); font-family:'Jost', sans-serif; font-weight:300;
+    min-height:100vh; display:flex; flex-direction:column; align-items:center;
+    padding:60px 20px;
+  }
+  h1,h2,h3{ font-family:'Cormorant Garamond', serif; font-weight:600; }
+  .logo{ font-family:'Cormorant Garamond', serif; font-size:1.4rem; margin-bottom:40px; display:flex; align-items:center; gap:8px; }
+  .logo svg{ color:var(--gold-bright); }
+  .card{
+    width:100%; max-width:460px; background:var(--charcoal); border:1px solid var(--panel-line);
+    padding:36px 30px;
+  }
+  .eyebrow{ font-size:0.7rem; letter-spacing:0.28em; text-transform:uppercase; color:var(--gold-bright); font-weight:500; }
+  .lookup label{ display:block; font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin:18px 0 8px; }
+  .lookup input{
+    width:100%; background:var(--panel); border:1px solid var(--panel-line); color:var(--ivory);
+    padding:12px 14px; font-family:'Jost',sans-serif; font-size:0.95rem;
+  }
+  .lookup input:focus{ outline:none; border-color:var(--gold); }
+  .lookup button{
+    width:100%; margin-top:18px; background:var(--gold-bright); border:none; color:var(--void);
+    padding:13px; font-family:'Jost',sans-serif; font-size:0.8rem; letter-spacing:0.1em; text-transform:uppercase;
+    cursor:pointer; transition:all .3s; font-weight:500;
+  }
+  .lookup button:hover{ background:var(--gold); }
+  .lookup button:disabled{ opacity:0.5; cursor:not-allowed; }
+
+  .order-head{ margin-bottom:28px; }
+  .order-head h2{ font-size:1.6rem; margin-top:6px; }
+  .order-head p{ color:var(--muted); font-size:0.85rem; margin-top:6px; }
+
+  .steps{ margin: 30px 0; }
+  .step{ display:flex; gap:16px; position:relative; padding-bottom:30px; }
+  .step:last-child{ padding-bottom:0; }
+  .step::before{
+    content:''; position:absolute; left:11px; top:26px; bottom:0; width:1px;
+    background: var(--panel-line);
+  }
+  .step:last-child::before{ display:none; }
+  .step-dot{
+    width:24px; height:24px; border-radius:50%; border:1px solid var(--panel-line);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:0.7rem;
+    background:var(--void); color:var(--faint); z-index:1;
+  }
+  .step.done .step-dot{ background:var(--gold-bright); border-color:var(--gold-bright); color:var(--void); }
+  .step.current .step-dot{ border-color:var(--gold-bright); color:var(--gold-bright); animation: pulseDot 1.6s ease-in-out infinite; }
+  @keyframes pulseDot{ 0%,100%{ box-shadow:0 0 0 0 rgba(243,237,225,0.35);} 50%{ box-shadow:0 0 0 6px rgba(243,237,225,0);} }
+  .step-body b{ display:block; font-size:0.95rem; color:var(--muted); }
+  .step.done .step-body b, .step.current .step-body b{ color:var(--ivory); }
+  .step-body small{ color:var(--faint); font-size:0.78rem; }
+
+  .state-box{ text-align:center; padding:30px 10px; }
+  .state-box.pending{ color:var(--muted); }
+  .state-box.cancelled b{ color:var(--danger); }
+  .state-box p{ font-size:0.88rem; line-height:1.6; margin-top:10px; }
+
+  .items-box{ margin-top:26px; border-top:1px solid var(--panel-line); padding-top:20px; }
+  .items-box h3{ font-size:0.95rem; margin-bottom:12px; color:var(--gold-bright); }
+  .item-row{ display:flex; justify-content:space-between; font-size:0.85rem; color:var(--muted); padding:6px 0; }
+  .total-row{ display:flex; justify-content:space-between; margin-top:12px; padding-top:12px; border-top:1px solid var(--panel-line); font-size:0.95rem; }
+  .total-row b{ color:var(--gold-bright); font-family:'Cormorant Garamond', serif; font-style:italic; font-size:1.2rem; }
+
+  .error-msg{ color:var(--danger); font-size:0.85rem; margin-top:14px; text-align:center; }
+  .back-link{ display:block; text-align:center; margin-top:24px; color:var(--muted); font-size:0.8rem; }
+  .back-link:hover{ color:var(--gold-bright); }
+</style>
+</head>
+<body>
+<div class="logo">
+  <svg viewBox="0 0 24 24" width="15" height="15" fill="none"><path d="M12 2 L12 22 M5 8 L19 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+  Just Grace
+</div>
+
+<div class="card" id="card">
+  <div class="eyebrow">Acompanhar pedido</div>
+  <div id="lookupBox" class="lookup" style="display:none;">
+    <label for="orderIdInput">Número do pedido</label>
+    <input type="text" id="orderIdInput" placeholder="PED-0001">
+    <button type="button" id="lookupBtn">Buscar pedido</button>
+    <div class="error-msg" id="lookupError"></div>
+  </div>
+  <div id="resultBox"></div>
+</div>
+
+<script src="store.js"></script>
+<script>
+const card = document.getElementById('card');
+const lookupBox = document.getElementById('lookupBox');
+const resultBox = document.getElementById('resultBox');
+const orderIdInput = document.getElementById('orderIdInput');
+const lookupError = document.getElementById('lookupError');
+
+const STEP_ORDER = ['paid', 'preparing', 'shipped', 'fulfilled'];
+const STEP_LABELS = {
+  paid: { title: 'Pagamento Confirmado', desc: 'Recebemos a confirmação do seu pagamento.' },
+  preparing: { title: 'Produto em Separação', desc: 'Sua peça está sendo separada com cuidado.' },
+  shipped: { title: 'A Caminho', desc: 'Seu pedido saiu para entrega.' },
+  fulfilled: { title: 'Entregue', desc: 'Seu pedido foi entregue. Obrigada pela confiança!' },
+};
+
+function renderSteps(order){
+  const currentIndex = STEP_ORDER.indexOf(order.status);
+  return STEP_ORDER.map((key, i) => {
+    const info = STEP_LABELS[key];
+    const cls = i < currentIndex ? 'done' : (i === currentIndex ? 'current' : '');
+    const mark = i < currentIndex ? '✓' : (i + 1);
+    return `
+      <div class="step ${cls}">
+        <div class="step-dot">${mark}</div>
+        <div class="step-body"><b>${info.title}</b><small>${info.desc}</small></div>
+      </div>`;
+  }).join('');
+}
+
+function renderOrder(order){
+  const qty = order.items.reduce((s,i)=> s + i.qty, 0);
+  let bodyHtml = '';
+
+  if(order.status === 'cancelled'){
+    bodyHtml = `
+      <div class="state-box cancelled">
+        <b>Pedido cancelado</b>
+        <p>Esse pedido foi cancelado. Se você não esperava isso, entre em contato com a gente pelo WhatsApp.</p>
+      </div>`;
+  } else if(order.status === 'payment_pending' || !STEP_ORDER.includes(order.status)){
+    bodyHtml = `
+      <div class="state-box pending">
+        <b>Aguardando confirmação de pagamento</b>
+        <p>Assim que o pagamento for confirmado, o acompanhamento aparece aqui automaticamente.</p>
+      </div>`;
+  } else {
+    bodyHtml = `<div class="steps">${renderSteps(order)}</div>`;
+  }
+
+  resultBox.innerHTML = `
+    <div class="order-head">
+      <div class="eyebrow">Pedido</div>
+      <h2>${order.id}</h2>
+      <p>${escapeHtml(order.customerName || '')} · ${new Date(order.createdAt).toLocaleString('pt-BR')}</p>
+    </div>
+    ${bodyHtml}
+    <div class="items-box">
+      <h3>Itens (${qty})</h3>
+      ${order.items.map(i => `<div class="item-row"><span>${i.qty}x ${escapeHtml(i.name)}${i.size && i.size!=='Único' ? ' · '+i.size : ''}</span><span>${formatPrice(i.price*i.qty)}</span></div>`).join('')}
+      <div class="total-row"><span>Total</span><b>${formatPrice((order.totalCents||0)/100)}</b></div>
+    </div>
+    <a class="back-link" href="#" id="newLookupLink">Consultar outro pedido</a>
+  `;
+  lookupBox.style.display = 'none';
+  document.getElementById('newLookupLink').addEventListener('click', (e)=>{
+    e.preventDefault();
+    resultBox.innerHTML = '';
+    lookupBox.style.display = 'block';
+    orderIdInput.value = '';
+    orderIdInput.focus();
+  });
+}
+
+function escapeHtml(str){
+  return String(str==null?'':str).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+function formatPrice(num){
+  return 'R$ ' + num.toFixed(2).replace('.', ',');
+}
+
+async function lookupOrder(rawId){
+  const id = rawId.trim().toUpperCase();
+  if(!id){
+    lookupError.textContent = 'Digite o número do pedido.';
+    return;
+  }
+  lookupError.textContent = 'Buscando...';
+  if(window.JGStore && window.JGStore.isSyncConfigured && window.JGStore.isSyncConfigured()){
+    await window.JGStore.syncOrders();
+  }
+  const orders = window.JGStore ? window.JGStore.getOrders() : [];
+  const order = orders.find(o => (o.id || '').toUpperCase() === id);
+  if(!order){
+    lookupError.textContent = 'Não encontramos nenhum pedido com esse número.';
+    return;
+  }
+  lookupError.textContent = '';
+  renderOrder(order);
+}
+
+document.getElementById('lookupBtn').addEventListener('click', ()=> lookupOrder(orderIdInput.value));
+orderIdInput.addEventListener('keydown', e=>{ if(e.key === 'Enter') lookupOrder(orderIdInput.value); });
+
+// se veio um ?pedido=PED-0001 na URL, busca direto sem precisar digitar
+const params = new URLSearchParams(window.location.search);
+const preset = params.get('pedido');
+if(preset){
+  lookupOrder(preset);
+} else {
+  lookupBox.style.display = 'block';
+}
+</script>
+</body>
+</html>
