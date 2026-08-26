@@ -436,6 +436,8 @@
   }
   .size-btn:hover{ border-color:var(--gold); color:var(--ivory); }
   .size-btn.selected{ border-color:var(--gold-bright); color:var(--gold-bright); background:rgba(243,237,225,0.06); }
+  .size-btn:disabled{ opacity:0.3; cursor:not-allowed; text-decoration:line-through; }
+  .size-btn:disabled:hover{ border-color:var(--panel-line); color:var(--muted); }
   .card-tag{
     position:absolute; top:16px; left:16px; font-size:0.65rem; letter-spacing:0.16em;
     text-transform:uppercase; color:var(--gold-bright); border:1px solid var(--panel-line); padding:5px 10px;
@@ -755,17 +757,20 @@
    Se o painel ainda não rodou nesta máquina, usamos o catálogo padrão do JGStore. */
 function loadStoreProducts(){
   const raw = (window.JGStore ? window.JGStore.getProducts() : []).filter(p => p.status !== 'archived');
-  return raw.map(p => ({
-    cat: p.cat,
-    tag: p.tag,
-    name: p.name,
-    desc: p.desc,
-    price: 'R$ ' + (p.priceCents/100).toFixed(2).replace('.', ','),
-    stock: p.stockQuantity,
-    svg: p.svg,
-    images: (p.images && p.images.length) ? p.images : (p.image ? [p.image] : []),
-    sizes: (p.sizes && p.sizes.length) ? p.sizes : ['Único'],
-  }));
+  return raw.map(p => {
+    const sizes = window.JGStore ? window.JGStore.normalizeSizes(p) : (p.sizes || [{label:'Único', stock:0}]);
+    return {
+      cat: p.cat,
+      tag: p.tag,
+      name: p.name,
+      desc: p.desc,
+      price: 'R$ ' + (p.priceCents/100).toFixed(2).replace('.', ','),
+      stock: window.JGStore ? window.JGStore.productTotalStock(p) : sizes.reduce((s,x)=>s+(x.stock||0),0),
+      svg: p.svg,
+      images: (p.images && p.images.length) ? p.images : (p.image ? [p.image] : []),
+      sizes: sizes,
+    };
+  });
 }
 /* ===== EXEMPLOS TEMPORÁRIOS — apenas para visualizar o layout com foto/tamanho/preço.
    Remova este array (e o "...demoProducts," logo abaixo) quando cadastrar peças reais no painel. ===== */
@@ -780,7 +785,7 @@ const demoProducts = [
       'https://placehold.co/500x500/1a1917/f3ede1?text=Costas&font=montserrat',
       'https://placehold.co/500x500/070706/b9ae98?text=Detalhe&font=montserrat',
     ],
-    sizes:['P','M','G','GG'],
+    sizes:[{label:'P',stock:3},{label:'M',stock:5},{label:'G',stock:3},{label:'GG',stock:1}],
   },
   {
     cat:'basicas', tag:'Exemplo', name:'Camiseta Esperança — Off-White',
@@ -791,7 +796,7 @@ const demoProducts = [
       'https://placehold.co/500x500/f3ede1/070706?text=Frente&font=montserrat',
       'https://placehold.co/500x500/e8e0d0/070706?text=Costas&font=montserrat',
     ],
-    sizes:['P','M','G','GG'],
+    sizes:[{label:'P',stock:3},{label:'M',stock:5},{label:'G',stock:3},{label:'GG',stock:1}],
   },
   {
     cat:'duopima', tag:'Exemplo', name:'Duo Pima Devoção — Preto & Cru',
@@ -799,7 +804,7 @@ const demoProducts = [
     price:'R$ 149,90', stock: 5,
     svg:'<circle cx="50" cy="50" r="28" stroke="#f3ede1" stroke-width="2" fill="none"/>',
     images:['https://placehold.co/500x500/1a1917/f3ede1?text=Duo+Pima&font=montserrat'],
-    sizes:['P','M','G','GG'],
+    sizes:[{label:'P',stock:3},{label:'M',stock:5},{label:'G',stock:3},{label:'GG',stock:1}],
   },
   {
     cat:'duopima', tag:'Exemplo', name:'Duo Pima Graça — Off-White & Preto',
@@ -807,7 +812,7 @@ const demoProducts = [
     price:'R$ 159,90', stock: 0,
     svg:'<circle cx="50" cy="50" r="28" stroke="#f3ede1" stroke-width="2" fill="none"/>',
     images:['https://placehold.co/500x500/f3ede1/070706?text=Duo+Pima+2&font=montserrat'],
-    sizes:['P','M','G','GG'],
+    sizes:[{label:'P',stock:0},{label:'M',stock:0},{label:'G',stock:0},{label:'GG',stock:0}],
   },
 ];
 const products = [...demoProducts, ...loadStoreProducts()];
@@ -854,7 +859,13 @@ function render(filter){
       artContent = `<svg viewBox="0 0 100 100">${p.svg}</svg>`;
     }
     const sizeRow = !outOfStock
-      ? `<div class="size-row">${p.sizes.map((s,i)=>`<button type="button" class="size-btn ${i===0?'selected':''}" data-size="${s}">${s}</button>`).join('')}</div>`
+      ? `<div class="size-row">${p.sizes.map((s,i)=>{
+          const label = typeof s === 'object' ? s.label : s;
+          const stock = typeof s === 'object' ? s.stock : 1;
+          const disabled = stock <= 0;
+          const firstAvailable = p.sizes.findIndex(x => (typeof x === 'object' ? x.stock : 1) > 0);
+          return `<button type="button" class="size-btn ${!disabled && i===firstAvailable ? 'selected' : ''}" data-size="${label}" ${disabled ? 'disabled title="Esgotado nesse tamanho"' : ''}>${label}</button>`;
+        }).join('')}</div>`
       : '';
     card.innerHTML = `
       <div class="card-art">

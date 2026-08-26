@@ -192,6 +192,34 @@
   }
   // gera um número de pedido sequencial e legível (PED-0001, PED-0002...),
   // olhando o maior número já usado entre os pedidos existentes.
+  // normaliza o campo "sizes" para sempre virar uma lista de {label, stock},
+  // aceitando também o formato antigo (lista de textos, com estoque único
+  // no produto inteiro), pra não quebrar produtos já cadastrados.
+  function normalizeSizes(product){
+    if(!product || !product.sizes || !product.sizes.length){
+      return [{ label: 'Único', stock: product && product.stockQuantity != null ? product.stockQuantity : 0 }];
+    }
+    if(typeof product.sizes[0] === 'object'){
+      return product.sizes;
+    }
+    // formato antigo: lista de textos + um estoque único pra tudo
+    const total = product.stockQuantity || 0;
+    return product.sizes.map(label => ({ label, stock: total }));
+  }
+  function productTotalStock(product){
+    return normalizeSizes(product).reduce((s, sz) => s + (sz.stock || 0), 0);
+  }
+  // ajusta o estoque de um tamanho específico (delta pode ser negativo).
+  // se o tamanho não for informado/encontrado, ajusta o primeiro da lista.
+  function adjustStock(product, delta, sizeLabel){
+    const sizes = normalizeSizes(product);
+    let target = sizeLabel ? sizes.find(s => s.label === sizeLabel) : null;
+    if(!target) target = sizes[0];
+    if(target) target.stock = Math.max(0, (target.stock || 0) + delta);
+    product.sizes = sizes;
+    return product;
+  }
+
   function nextOrderId(orders){
     let max = 0;
     (orders || []).forEach(o => {
@@ -255,10 +283,10 @@
     const svgPlaceholder = '<circle cx="50" cy="50" r="28" stroke="#f3ede1" stroke-width="2" fill="none"/><path d="M38 42 L50 30 L62 42" stroke="#f3ede1" stroke-width="2" fill="none" stroke-linecap="round"/>';
 
     const defaultProducts = [
-      { id:uid('p'), cat:'basicas', tag:'Camiseta', name:'Camiseta Graça Essencial', desc:'Algodão penteado, corte reto, estampa minimalista.', priceCents:8900, stockQuantity:12, status:'active', sku:'JG-BAS-001', svg:svgPlaceholder, images:['https://placehold.co/500x500/070706/f3ede1?text=Camiseta+Preta&font=montserrat'], sizes:['P','M','G','GG'] },
-      { id:uid('p'), cat:'basicas', tag:'Camiseta', name:'Camiseta Fé em Movimento', desc:'Malha macia, silk artesanal no peito.', priceCents:9400, stockQuantity:8, status:'active', sku:'JG-BAS-002', svg:svgPlaceholder, images:['https://placehold.co/500x500/f3ede1/070706?text=Camiseta+Off-White&font=montserrat'], sizes:['P','M','G','GG'] },
-      { id:uid('p'), cat:'duopima', tag:'Duo Pima', name:'Camiseta Duo Pima Propósito', desc:'Algodão Pima premium, toque macio e caimento superior.', priceCents:12900, stockQuantity:5, status:'active', sku:'JG-DUO-001', svg:svgPlaceholder, images:[], sizes:['P','M','G','GG'] },
-      { id:uid('p'), cat:'duopima', tag:'Duo Pima', name:'Camiseta Duo Pima A Graça Basta', desc:'Edição limitada, bordado discreto.', priceCents:13900, stockQuantity:0, status:'active', sku:'JG-DUO-002', svg:svgPlaceholder, images:[], sizes:['P','M','G','GG'] },
+      { id:uid('p'), cat:'basicas', tag:'Camiseta', name:'Camiseta Graça Essencial', desc:'Algodão penteado, corte reto, estampa minimalista.', priceCents:8900, status:'active', sku:'JG-BAS-001', svg:svgPlaceholder, images:['https://placehold.co/500x500/070706/f3ede1?text=Camiseta+Preta&font=montserrat'], sizes:[{label:'P',stock:3},{label:'M',stock:5},{label:'G',stock:3},{label:'GG',stock:1}] },
+      { id:uid('p'), cat:'basicas', tag:'Camiseta', name:'Camiseta Fé em Movimento', desc:'Malha macia, silk artesanal no peito.', priceCents:9400, status:'active', sku:'JG-BAS-002', svg:svgPlaceholder, images:['https://placehold.co/500x500/f3ede1/070706?text=Camiseta+Off-White&font=montserrat'], sizes:[{label:'P',stock:2},{label:'M',stock:4},{label:'G',stock:2},{label:'GG',stock:0}] },
+      { id:uid('p'), cat:'duopima', tag:'Duo Pima', name:'Camiseta Duo Pima Propósito', desc:'Algodão Pima premium, toque macio e caimento superior.', priceCents:12900, status:'active', sku:'JG-DUO-001', svg:svgPlaceholder, images:[], sizes:[{label:'P',stock:1},{label:'M',stock:2},{label:'G',stock:2},{label:'GG',stock:0}] },
+      { id:uid('p'), cat:'duopima', tag:'Duo Pima', name:'Camiseta Duo Pima A Graça Basta', desc:'Edição limitada, bordado discreto.', priceCents:13900, status:'active', sku:'JG-DUO-002', svg:svgPlaceholder, images:[], sizes:[{label:'P',stock:0},{label:'M',stock:0},{label:'G',stock:0},{label:'GG',stock:0}] },
     ];
 
     const defaultDelivery = [
@@ -311,6 +339,9 @@
     money,
     orderStatusLabel,
     nextOrderId,
+    normalizeSizes,
+    productTotalStock,
+    adjustStock,
 
     // produtos
     getProducts(){ return read(KEYS.products, []); },
@@ -411,10 +442,13 @@
       orders.unshift(order);
       this.saveOrders(orders);
 
-      // baixa estoque
+      // baixa estoque, do tamanho específico comprado
       orderItems.forEach(oi=>{
         const p = products.find(pp => pp.name === oi.name);
-        if(p) p.stockQuantity = Math.max(0, p.stockQuantity - oi.qty);
+        if(!p) return;
+        p.sizes = normalizeSizes(p);
+        const sz = p.sizes.find(s => s.label === (oi.size || 'Único'));
+        if(sz) sz.stock = Math.max(0, (sz.stock || 0) - oi.qty);
       });
       this.saveProducts(products);
 

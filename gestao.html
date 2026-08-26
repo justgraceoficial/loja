@@ -478,8 +478,8 @@ function renderDashboard(body){
   const orders = S.getOrders();
   const customers = S.getCustomers();
   const active = products.filter(p=>p.status==='active');
-  const low = active.filter(p=>p.stockQuantity>0 && p.stockQuantity<=3).length;
-  const out = active.filter(p=>p.stockQuantity===0).length;
+  const low = active.filter(p=>{ const t=S.productTotalStock(p); return t>0 && t<=3; }).length;
+  const out = active.filter(p=>S.productTotalStock(p)===0).length;
   const revenue = orders.filter(o=>['paid','preparing','shipped','fulfilled'].includes(o.status)).reduce((s,o)=>s+o.totalCents,0);
   const pendingContact = orders.filter(o=>needsFollowUp(o)).length;
 
@@ -499,7 +499,7 @@ function renderDashboard(body){
     </div>
     <div class="panel-block">
       <h3>Estoque Para Revisar</h3>
-      ${active.filter(p=>p.stockQuantity<=3).length ? `<div class="products-grid">${active.filter(p=>p.stockQuantity<=3).map(p=>productCardHTML(p)).join('')}</div>` : '<div class="empty-state">Nenhuma peça com estoque baixo no momento.</div>'}
+      ${active.filter(p=>S.productTotalStock(p)<=3).length ? `<div class="products-grid">${active.filter(p=>S.productTotalStock(p)<=3).map(p=>productCardHTML(p)).join('')}</div>` : '<div class="empty-state">Nenhuma peça com estoque baixo no momento.</div>'}
     </div>
   `;
   attachOrderRowEvents(body);
@@ -533,8 +533,10 @@ function renderProducts(body, actions){
 }
 
 function productCardHTML(p, withActions){
-  const stockClass = p.stockQuantity===0 ? 'out' : p.stockQuantity<=3 ? 'low' : 'ok';
-  const stockLabel = p.stockQuantity===0 ? 'Esgotado' : p.stockQuantity<=3 ? 'Estoque baixo' : 'Disponível';
+  const total = S.productTotalStock(p);
+  const stockClass = total===0 ? 'out' : total<=3 ? 'low' : 'ok';
+  const stockLabel = total===0 ? 'Esgotado' : total<=3 ? 'Estoque baixo' : 'Disponível';
+  const sizesBreakdown = S.normalizeSizes(p).map(s => `${escapeHtml(s.label)}: ${s.stock}`).join(' · ');
   return `
     <div class="product-card ${p.status==='archived'?'archived':''}" data-id="${p.id}">
       <div class="product-art"><svg viewBox="0 0 100 100">${p.svg||''}</svg></div>
@@ -543,12 +545,9 @@ function productCardHTML(p, withActions){
       <div class="price">${money(p.priceCents)}</div>
       <div class="stock-row">
         <span class="stock-pill ${stockClass}">${stockLabel}</span>
-        <div class="qty-ctrl">
-          <button data-action="dec" ${can('stock_manage')?'':'disabled'}>−</button>
-          <b>${p.stockQuantity}</b>
-          <button data-action="inc" ${can('stock_manage')?'':'disabled'}>+</button>
-        </div>
+        <b>${total} un.</b>
       </div>
+      <div class="meta" style="margin-top:4px;">${sizesBreakdown}</div>
       ${withActions && can('products_manage') ? `
       <div class="product-actions">
         <button data-action="edit">Editar</button>
@@ -560,20 +559,6 @@ function productCardHTML(p, withActions){
 function attachProductCardEvents(root){
   root.querySelectorAll('.product-card').forEach(card=>{
     const id = card.dataset.id;
-    card.querySelectorAll('[data-action="dec"],[data-action="inc"]').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        if(!can('stock_manage')) return;
-        const products = S.getProducts();
-        const p = products.find(x=>x.id===id);
-        if(!p) return;
-        const delta = btn.dataset.action==='inc' ? 1 : -1;
-        const next = Math.max(0, p.stockQuantity + delta);
-        S.addAudit('stock_change', `Estoque de ${p.name} alterado de ${p.stockQuantity} para ${next}.`, session.name);
-        p.stockQuantity = next;
-        S.saveProducts(products);
-        renderView();
-      });
-    });
     const editBtn = card.querySelector('[data-action="edit"]');
     if(editBtn) editBtn.addEventListener('click', ()=>{
       const p = S.getProducts().find(x=>x.id===id);
@@ -593,7 +578,7 @@ function attachProductCardEvents(root){
 
 function openProductModal(product){
   const isNew = !product;
-  const p = product || { id:S.uid('p'), cat:'basicas', tag:'Camiseta', name:'', desc:'', priceCents:0, stockQuantity:0, status:'active', sku:'', svg:'<circle cx="50" cy="50" r="28" stroke="#f3ede1" stroke-width="2" fill="none"/>', images:[], sizes:['P','M','G','GG'] };
+  const p = product || { id:S.uid('p'), cat:'basicas', tag:'Camiseta', name:'', desc:'', priceCents:0, status:'active', sku:'', svg:'<circle cx="50" cy="50" r="28" stroke="#f3ede1" stroke-width="2" fill="none"/>', images:[], sizes:[] };
   let productImages = (p.images && p.images.length ? p.images.slice() : (p.image ? [p.image] : [])).slice(0, 4);
   const MAX_PHOTOS = 4;
 
@@ -629,7 +614,6 @@ function openProductModal(product){
         </div>
         <div class="field"><label>Etiqueta</label><input id="fTag" value="${escapeAttr(p.tag)}" placeholder="Camiseta"></div>
         <div class="field"><label>Preço (R$)</label><input id="fPrice" type="number" min="0" step="0.01" value="${isNew ? '' : (p.priceCents/100).toFixed(2)}" placeholder="0,00"></div>
-        <div class="field"><label>Estoque</label><input id="fStock" type="number" min="0" value="${isNew ? '' : p.stockQuantity}" placeholder="0"></div>
         <div class="field"><label>SKU</label><input id="fSku" value="${escapeAttr(p.sku||'')}" placeholder="JG-BAS-004"></div>
         <div class="field"><label>Status</label>
           <select id="fStatus">
@@ -642,7 +626,11 @@ function openProductModal(product){
           <div id="fImagesWrap" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;"></div>
           <input type="file" id="fImageFile" accept="image/jpeg,image/png" multiple>
         </div>
-        <div class="field wide"><label>Tamanhos Disponíveis (Separados Por Vírgula)</label><input id="fSizes" value="${escapeAttr((p.sizes && p.sizes.length ? p.sizes : ['P','M','G','GG']).join(', '))}" placeholder="P, M, G, GG"></div>
+        <div class="field wide">
+          <label>Tamanhos E Estoque</label>
+          <div id="fSizesWrap"></div>
+          <button type="button" class="btn" id="fSizeAdd" style="margin-top:8px;">＋ Adicionar Tamanho</button>
+        </div>
         <div class="field wide"><label>Descrição</label><textarea id="fDesc" rows="3" placeholder="Descrição exibida na loja">${escapeHtml(p.desc)}</textarea></div>
       </div>
       <div class="field-hint">Cada foto é redimensionada e comprimida automaticamente ao carregar. A primeira foto é a capa mostrada no catálogo; as demais aparecem no carrossel. Se não carregar nenhuma, o card mostra o símbolo de linha fina padrão.</div>
@@ -655,6 +643,37 @@ function openProductModal(product){
   `);
   document.getElementById('mClose').addEventListener('click', closeModal);
   document.getElementById('mCancel').addEventListener('click', closeModal);
+
+  let productSizes = S.normalizeSizes(p).map(s => ({ label: s.label, stock: s.stock || 0 }));
+  if(isNew) productSizes = [{label:'P',stock:0},{label:'M',stock:0},{label:'G',stock:0},{label:'GG',stock:0}];
+
+  function renderSizesEditor(){
+    const wrap = document.getElementById('fSizesWrap');
+    wrap.innerHTML = productSizes.map((sz, i) => `
+      <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+        <input type="text" data-size-label="${i}" value="${escapeAttr(sz.label)}" placeholder="Tamanho (ex: P)" style="max-width:110px;">
+        <input type="number" min="0" data-size-stock="${i}" value="${sz.stock}" placeholder="Qtd." style="max-width:100px;">
+        <button type="button" data-size-remove="${i}" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:1.1rem;">×</button>
+      </div>
+    `).join('');
+    wrap.querySelectorAll('[data-size-label]').forEach(inp=>{
+      inp.addEventListener('input', ()=>{ productSizes[Number(inp.dataset.sizeLabel)].label = inp.value; });
+    });
+    wrap.querySelectorAll('[data-size-stock]').forEach(inp=>{
+      inp.addEventListener('input', ()=>{ productSizes[Number(inp.dataset.sizeStock)].stock = Math.max(0, Number(inp.value||0)); });
+    });
+    wrap.querySelectorAll('[data-size-remove]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        productSizes.splice(Number(btn.dataset.sizeRemove), 1);
+        renderSizesEditor();
+      });
+    });
+  }
+  renderSizesEditor();
+  document.getElementById('fSizeAdd').addEventListener('click', ()=>{
+    productSizes.push({ label: '', stock: 0 });
+    renderSizesEditor();
+  });
 
   renderPhotoPreviews();
   const fImageFile = document.getElementById('fImageFile');
@@ -719,20 +738,22 @@ function openProductModal(product){
   document.getElementById('mSave').addEventListener('click', ()=>{
     const name = document.getElementById('fName').value.trim();
     if(!name){ alert('Informe o nome do produto.'); return; }
+    const validSizes = productSizes.filter(s => s.label.trim());
+    if(!validSizes.length){ alert('Adicione pelo menos um tamanho.'); return; }
     const updated = {
       ...p,
       name,
       cat: document.getElementById('fCat').value,
       tag: document.getElementById('fTag').value.trim() || 'Camiseta',
       priceCents: Math.round(Number(document.getElementById('fPrice').value||0)*100),
-      stockQuantity: Math.max(0, Number(document.getElementById('fStock').value||0)),
       sku: document.getElementById('fSku').value.trim(),
       status: document.getElementById('fStatus').value,
       images: productImages.slice(),
-      sizes: document.getElementById('fSizes').value.split(',').map(s=>s.trim()).filter(Boolean),
+      sizes: validSizes.map(s => ({ label: s.label.trim(), stock: s.stock })),
       desc: document.getElementById('fDesc').value.trim(),
     };
     delete updated.image;
+    delete updated.stockQuantity;
     const products = S.getProducts();
     const idx = products.findIndex(x=>x.id===p.id);
     if(idx>=0) products[idx] = updated; else products.unshift(updated);
@@ -873,7 +894,7 @@ function updateOrderStatus(order, status, paymentMethod, label){
     const products = S.getProducts();
     orders[idx].items.forEach(item=>{
       const p = products.find(x=>x.id===item.productId);
-      if(p) p.stockQuantity = Math.max(0, p.stockQuantity - item.quantity);
+      if(p) S.adjustStock(p, -item.quantity, item.size);
     });
     S.saveProducts(products);
     orders[idx].stockDeducted = true;
@@ -881,7 +902,7 @@ function updateOrderStatus(order, status, paymentMethod, label){
     const products = S.getProducts();
     orders[idx].items.forEach(item=>{
       const p = products.find(x=>x.id===item.productId);
-      if(p) p.stockQuantity += item.quantity;
+      if(p) S.adjustStock(p, item.quantity, item.size);
     });
     S.saveProducts(products);
     orders[idx].stockDeducted = false;
@@ -986,7 +1007,7 @@ function renderManualOrderModal(products, customers){
     const allProducts = S.getProducts();
     orderItems.forEach(item=>{
       const p = allProducts.find(x=>x.id===item.productId);
-      if(p) p.stockQuantity = Math.max(0, p.stockQuantity - item.quantity);
+      if(p) S.adjustStock(p, -item.quantity, item.size);
     });
     S.saveProducts(allProducts);
     const custs = S.getCustomers();
@@ -1005,7 +1026,7 @@ function manualItemRowHTML(it, i, products){
     <div class="manual-item-row" data-index="${i}">
       <select>
         <option value="">Selecione uma peça</option>
-        ${products.map(pr=>`<option value="${pr.id}" ${it.productId===pr.id?'selected':''} ${pr.stockQuantity===0?'disabled':''}>${escapeHtml(pr.name)} · ${money(pr.priceCents)} · ${pr.stockQuantity} em estoque</option>`).join('')}
+        ${products.map(pr=>`<option value="${pr.id}" ${it.productId===pr.id?'selected':''} ${S.productTotalStock(pr)===0?'disabled':''}>${escapeHtml(pr.name)} · ${money(pr.priceCents)} · ${S.productTotalStock(pr)} em estoque</option>`).join('')}
       </select>
       <div class="qc"><button type="button" data-qc="dec">−</button><b>${it.qty}</b><button type="button" data-qc="inc">＋</button></div>
       <strong style="min-width:80px; text-align:right;">${money((p?p.priceCents:0)*it.qty)}</strong>
