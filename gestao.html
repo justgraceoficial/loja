@@ -1164,7 +1164,10 @@ function renderDelivery(body){
     <div class="delivery-zones">
       ${zones.map(zone => `
         <div class="zone-card">
-          <h4>${escapeHtml(zone)}</h4>
+          <h4 style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+            <span>${escapeHtml(zone)}</span>
+            ${can('delivery_manage') ? `<button data-rename-zone="${escapeAttr(zone)}" style="font-size:0.65rem; text-transform:uppercase; letter-spacing:0.06em; background:none; border:1px solid var(--panel-line); color:var(--muted); padding:4px 8px; cursor:pointer;">Renomear</button>` : ''}
+          </h4>
           ${fees.filter(f=>f.zone===zone).map(f=>`
             <div class="zone-row">
               <span>${escapeHtml(f.neighborhood)}</span>
@@ -1202,6 +1205,18 @@ function renderDelivery(body){
       fees = fees.filter(x=>x.id!==id);
       S.saveDeliveryFees(fees);
       S.addAudit('delivery_remove', `Bairro ${f.neighborhood} removido dos fretes.`, session.name);
+      renderView();
+    });
+  });
+  body.querySelectorAll('[data-rename-zone]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const oldZone = btn.dataset.renameZone;
+      const newZone = prompt(`Novo nome para a zona "${oldZone}":`, oldZone);
+      if(!newZone || !newZone.trim() || newZone.trim() === oldZone) return;
+      const fees = S.getDeliveryFees();
+      fees.forEach(f=>{ if(f.zone === oldZone) f.zone = newZone.trim(); });
+      S.saveDeliveryFees(fees);
+      S.addAudit('delivery_rename_zone', `Zona "${oldZone}" renomeada para "${newZone.trim()}".`, session.name);
       renderView();
     });
   });
