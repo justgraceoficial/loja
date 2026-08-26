@@ -593,7 +593,29 @@ function attachProductCardEvents(root){
 
 function openProductModal(product){
   const isNew = !product;
-  const p = product || { id:S.uid('p'), cat:'basicas', tag:'Camiseta', name:'', desc:'', priceCents:0, stockQuantity:0, status:'active', sku:'', svg:'<circle cx="50" cy="50" r="28" stroke="#f3ede1" stroke-width="2" fill="none"/>', image:'', sizes:['P','M','G','GG'] };
+  const p = product || { id:S.uid('p'), cat:'basicas', tag:'Camiseta', name:'', desc:'', priceCents:0, stockQuantity:0, status:'active', sku:'', svg:'<circle cx="50" cy="50" r="28" stroke="#f3ede1" stroke-width="2" fill="none"/>', images:[], sizes:['P','M','G','GG'] };
+  let productImages = (p.images && p.images.length ? p.images.slice() : (p.image ? [p.image] : [])).slice(0, 4);
+  const MAX_PHOTOS = 4;
+
+  function renderPhotoPreviews(){
+    const wrap = document.getElementById('fImagesWrap');
+    wrap.innerHTML = productImages.map((src, i) => `
+      <div style="position:relative; width:90px; height:90px;">
+        <img src="${src}" style="width:100%; height:100%; object-fit:cover; border:1px solid var(--panel-line);">
+        <button type="button" data-remove-photo="${i}" style="position:absolute; top:-8px; right:-8px; width:22px; height:22px; border-radius:50%; background:var(--danger); color:#fff; border:none; cursor:pointer; font-size:0.8rem; line-height:1;">×</button>
+        ${i===0 ? `<span style="position:absolute; bottom:2px; left:2px; background:rgba(0,0,0,0.65); color:var(--gold-bright); font-size:0.6rem; padding:2px 5px; text-transform:uppercase; letter-spacing:0.05em;">Capa</span>` : ''}
+      </div>
+    `).join('');
+    document.getElementById('fImageFile').disabled = productImages.length >= MAX_PHOTOS;
+    document.getElementById('fPhotoCount').textContent = productImages.length + '/' + MAX_PHOTOS;
+    wrap.querySelectorAll('[data-remove-photo]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        productImages.splice(Number(btn.dataset.removePhoto), 1);
+        renderPhotoPreviews();
+      });
+    });
+  }
+
   showModal(`
     <header><h3>${isNew?'Novo Produto':'Editar Produto'}</h3><button class="close" id="mClose">×</button></header>
     <div class="modal-body">
@@ -616,18 +638,14 @@ function openProductModal(product){
           </select>
         </div>
         <div class="field wide">
-          <label>Foto Do Produto (JPG ou PNG)</label>
-          <input type="file" id="fImageFile" accept="image/jpeg,image/png">
-          <div id="fImagePreviewWrap" style="margin-top:10px; ${p.image ? '' : 'display:none;'}">
-            <img id="fImagePreview" src="${escapeAttr(p.image||'')}" style="max-width:140px; max-height:140px; border:1px solid var(--panel-line); display:block; object-fit:cover;">
-            <button type="button" class="btn" id="fImageRemove" style="margin-top:8px;">Remover foto</button>
-          </div>
-          <input type="hidden" id="fImage" value="${escapeAttr(p.image||'')}">
+          <label>Fotos Do Produto (até 4 — JPG ou PNG) — <span id="fPhotoCount">0/4</span></label>
+          <div id="fImagesWrap" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;"></div>
+          <input type="file" id="fImageFile" accept="image/jpeg,image/png" multiple>
         </div>
         <div class="field wide"><label>Tamanhos Disponíveis (Separados Por Vírgula)</label><input id="fSizes" value="${escapeAttr((p.sizes && p.sizes.length ? p.sizes : ['P','M','G','GG']).join(', '))}" placeholder="P, M, G, GG"></div>
         <div class="field wide"><label>Descrição</label><textarea id="fDesc" rows="3" placeholder="Descrição exibida na loja">${escapeHtml(p.desc)}</textarea></div>
       </div>
-      <div class="field-hint">A foto é redimensionada e comprimida automaticamente ao carregar. Se preferir manter o símbolo de linha fina padrão, não carregue nenhuma imagem.</div>
+      <div class="field-hint">Cada foto é redimensionada e comprimida automaticamente ao carregar. A primeira foto é a capa mostrada no catálogo; as demais aparecem no carrossel. Se não carregar nenhuma, o card mostra o símbolo de linha fina padrão.</div>
     </div>
     <footer>
       ${!isNew ? `<button class="btn danger" id="mDelete" style="margin-right:auto;">Excluir produto</button>` : ''}
@@ -638,20 +656,27 @@ function openProductModal(product){
   document.getElementById('mClose').addEventListener('click', closeModal);
   document.getElementById('mCancel').addEventListener('click', closeModal);
 
+  renderPhotoPreviews();
   const fImageFile = document.getElementById('fImageFile');
-  const fImage = document.getElementById('fImage');
-  const fImagePreview = document.getElementById('fImagePreview');
-  const fImagePreviewWrap = document.getElementById('fImagePreviewWrap');
-  const fImageRemove = document.getElementById('fImageRemove');
 
   fImageFile.addEventListener('change', ()=>{
-    const file = fImageFile.files[0];
-    if(!file) return;
+    const files = Array.from(fImageFile.files || []);
+    const slotsLeft = MAX_PHOTOS - productImages.length;
+    if(slotsLeft <= 0){
+      alert('Você já tem 4 fotos. Remova alguma antes de adicionar outra.');
+      fImageFile.value = '';
+      return;
+    }
+    files.slice(0, slotsLeft).forEach(file => compressAndAddPhoto(file));
+    fImageFile.value = '';
+  });
+
+  function compressAndAddPhoto(file){
     const reader = new FileReader();
     reader.onload = (ev)=>{
       const img = new Image();
       img.onload = ()=>{
-        const maxDim = 900;
+        const maxDim = 700;
         let w = img.width, h = img.height;
         if(w >= h && w > maxDim){ h = Math.round(h * maxDim / w); w = maxDim; }
         else if(h > w && h > maxDim){ w = Math.round(w * maxDim / h); h = maxDim; }
@@ -661,32 +686,26 @@ function openProductModal(product){
         ctx.fillStyle = '#070706';
         ctx.fillRect(0, 0, w, h);
         ctx.drawImage(img, 0, 0, w, h);
-        let quality = 0.8;
+        let quality = 0.72;
         let dataUrl = canvas.toDataURL('image/jpeg', quality);
         let attempts = 0;
-        while(dataUrl.length > 45000 && attempts < 7){
-          quality = Math.max(0.3, quality - 0.1);
+        while(dataUrl.length > 10000 && attempts < 8){
+          quality = Math.max(0.25, quality - 0.08);
           dataUrl = canvas.toDataURL('image/jpeg', quality);
           attempts++;
         }
-        if(dataUrl.length > 45000){
-          alert('Essa imagem ficou grande demais mesmo depois de comprimida. Tente uma foto mais simples ou com menos detalhes.');
+        if(dataUrl.length > 10000){
+          alert('Uma das imagens ficou grande demais mesmo comprimida. Tente uma foto mais simples.');
           return;
         }
-        fImage.value = dataUrl;
-        fImagePreview.src = dataUrl;
-        fImagePreviewWrap.style.display = 'block';
+        productImages.push(dataUrl);
+        renderPhotoPreviews();
       };
-      img.onerror = ()=> alert('Não foi possível ler essa imagem. Tente um arquivo JPG ou PNG.');
+      img.onerror = ()=> alert('Não foi possível ler uma das imagens. Tente um arquivo JPG ou PNG.');
       img.src = ev.target.result;
     };
     reader.readAsDataURL(file);
-  });
-  fImageRemove.addEventListener('click', ()=>{
-    fImage.value = '';
-    fImageFile.value = '';
-    fImagePreviewWrap.style.display = 'none';
-  });
+  }
 
   if(!isNew){
     document.getElementById('mDelete').addEventListener('click', ()=>{
@@ -709,10 +728,11 @@ function openProductModal(product){
       stockQuantity: Math.max(0, Number(document.getElementById('fStock').value||0)),
       sku: document.getElementById('fSku').value.trim(),
       status: document.getElementById('fStatus').value,
-      image: document.getElementById('fImage').value.trim(),
+      images: productImages.slice(),
       sizes: document.getElementById('fSizes').value.split(',').map(s=>s.trim()).filter(Boolean),
       desc: document.getElementById('fDesc').value.trim(),
     };
+    delete updated.image;
     const products = S.getProducts();
     const idx = products.findIndex(x=>x.id===p.id);
     if(idx>=0) products[idx] = updated; else products.unshift(updated);

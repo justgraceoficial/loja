@@ -255,10 +255,10 @@
     const svgPlaceholder = '<circle cx="50" cy="50" r="28" stroke="#f3ede1" stroke-width="2" fill="none"/><path d="M38 42 L50 30 L62 42" stroke="#f3ede1" stroke-width="2" fill="none" stroke-linecap="round"/>';
 
     const defaultProducts = [
-      { id:uid('p'), cat:'basicas', tag:'Camiseta', name:'Camiseta Graça Essencial', desc:'Algodão penteado, corte reto, estampa minimalista.', priceCents:8900, stockQuantity:12, status:'active', sku:'JG-BAS-001', svg:svgPlaceholder, image:'https://placehold.co/500x500/070706/f3ede1?text=Camiseta+Preta&font=montserrat', sizes:['P','M','G','GG'] },
-      { id:uid('p'), cat:'basicas', tag:'Camiseta', name:'Camiseta Fé em Movimento', desc:'Malha macia, silk artesanal no peito.', priceCents:9400, stockQuantity:8, status:'active', sku:'JG-BAS-002', svg:svgPlaceholder, image:'https://placehold.co/500x500/f3ede1/070706?text=Camiseta+Off-White&font=montserrat', sizes:['P','M','G','GG'] },
-      { id:uid('p'), cat:'duopima', tag:'Duo Pima', name:'Camiseta Duo Pima Propósito', desc:'Algodão Pima premium, toque macio e caimento superior.', priceCents:12900, stockQuantity:5, status:'active', sku:'JG-DUO-001', svg:svgPlaceholder, image:'', sizes:['P','M','G','GG'] },
-      { id:uid('p'), cat:'duopima', tag:'Duo Pima', name:'Camiseta Duo Pima A Graça Basta', desc:'Edição limitada, bordado discreto.', priceCents:13900, stockQuantity:0, status:'active', sku:'JG-DUO-002', svg:svgPlaceholder, image:'', sizes:['P','M','G','GG'] },
+      { id:uid('p'), cat:'basicas', tag:'Camiseta', name:'Camiseta Graça Essencial', desc:'Algodão penteado, corte reto, estampa minimalista.', priceCents:8900, stockQuantity:12, status:'active', sku:'JG-BAS-001', svg:svgPlaceholder, images:['https://placehold.co/500x500/070706/f3ede1?text=Camiseta+Preta&font=montserrat'], sizes:['P','M','G','GG'] },
+      { id:uid('p'), cat:'basicas', tag:'Camiseta', name:'Camiseta Fé em Movimento', desc:'Malha macia, silk artesanal no peito.', priceCents:9400, stockQuantity:8, status:'active', sku:'JG-BAS-002', svg:svgPlaceholder, images:['https://placehold.co/500x500/f3ede1/070706?text=Camiseta+Off-White&font=montserrat'], sizes:['P','M','G','GG'] },
+      { id:uid('p'), cat:'duopima', tag:'Duo Pima', name:'Camiseta Duo Pima Propósito', desc:'Algodão Pima premium, toque macio e caimento superior.', priceCents:12900, stockQuantity:5, status:'active', sku:'JG-DUO-001', svg:svgPlaceholder, images:[], sizes:['P','M','G','GG'] },
+      { id:uid('p'), cat:'duopima', tag:'Duo Pima', name:'Camiseta Duo Pima A Graça Basta', desc:'Edição limitada, bordado discreto.', priceCents:13900, stockQuantity:0, status:'active', sku:'JG-DUO-002', svg:svgPlaceholder, images:[], sizes:['P','M','G','GG'] },
     ];
 
     const defaultDelivery = [
