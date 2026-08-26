@@ -155,11 +155,10 @@
   .order-row .oname small{ color:var(--muted); font-size:0.74rem; }
   .order-row .ototal{ font-family:'Cormorant Garamond',serif; font-style:italic; color:var(--gold-bright); font-size:1.15rem; width:110px; text-align:right; }
   .status-pill{ font-size:0.66rem; letter-spacing:0.06em; text-transform:uppercase; padding:5px 10px; border:1px solid var(--panel-line); white-space:nowrap; }
-  .status-pill.cart_confirmed, .status-pill.contact_pending{ color:var(--warn); border-color:rgba(216,178,106,0.4); }
   .status-pill.payment_pending{ color:#a9c1e8; border-color:rgba(169,193,232,0.35); }
   .status-pill.paid, .status-pill.fulfilled, .status-pill.delivered{ color:var(--ok); border-color:rgba(143,176,138,0.4); }
   .status-pill.cancelled{ color:var(--danger); border-color:rgba(201,119,111,0.4); }
-  .status-pill.contacted, .status-pill.preparing, .status-pill.out_for_delivery{ color:var(--gold-bright); border-color:var(--panel-line); }
+  .status-pill.shipped{ color:var(--gold-bright); border-color:var(--panel-line); }
 
   /* customers */
   .customer-table{ width:100%; border-collapse:collapse; font-size:0.86rem; }
@@ -508,7 +507,7 @@ function renderDashboard(body){
 }
 
 function needsFollowUp(order){
-  return ['cart_confirmed','payment_error','payment_expired','payment_cancelled'].includes(order.status)
+  return ['payment_error','payment_expired','payment_cancelled'].includes(order.status)
     && (Date.now() - new Date(order.createdAt).getTime()) >= 15*60*1000;
 }
 
@@ -777,10 +776,9 @@ function openOrderModal(order){
         <div class="field"><label>Data do pedido</label><input value="${new Date(order.createdAt).toLocaleString('pt-BR')}" disabled></div>
         <div class="field"><label>Situação do pedido</label>
           <select id="fStatus">
-            <option value="cart_confirmed" ${order.status==='cart_confirmed'?'selected':''}>Contato pendente</option>
-            <option value="contacted" ${order.status==='contacted'?'selected':''}>Contato realizado</option>
             <option value="payment_pending" ${order.status==='payment_pending'?'selected':''}>Aguardando pagamento</option>
             <option value="paid" ${order.status==='paid'?'selected':''}>Pago — baixar estoque</option>
+            <option value="shipped" ${order.status==='shipped'?'selected':''}>A caminho</option>
             <option value="fulfilled" ${order.status==='fulfilled'?'selected':''}>Entregue</option>
             <option value="cancelled" ${order.status==='cancelled'?'selected':''}>Cancelado</option>
           </select>
@@ -955,7 +953,7 @@ function renderManualOrderModal(products, customers){
     });
     const subtotalCents = orderItems.reduce((s,i)=>s+i.unitPriceCents*i.quantity,0);
     const order = {
-      id: 'JG' + Date.now().toString().slice(-6),
+      id: S.nextOrderId(S.getOrders()),
       customerName: d.customerName.trim(), customerPhone: d.customerPhone.trim(),
       subtotalCents, deliveryCents:0, discountCents:0, totalCents: subtotalCents,
       status:'paid', deliveryStatus:'delivered', paymentMethod: d.paymentMethod,

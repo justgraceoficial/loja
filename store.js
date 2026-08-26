@@ -190,16 +190,28 @@
   function uid(prefix){
     return (prefix ? prefix + '_' : '') + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   }
+  // gera um número de pedido sequencial e legível (PED-0001, PED-0002...),
+  // olhando o maior número já usado entre os pedidos existentes.
+  function nextOrderId(orders){
+    let max = 0;
+    (orders || []).forEach(o => {
+      const match = /^PED-(\d+)$/.exec(o.id || '');
+      if(match){
+        const n = parseInt(match[1], 10);
+        if(n > max) max = n;
+      }
+    });
+    return 'PED-' + String(max + 1).padStart(4, '0');
+  }
   function nowISO(){ return new Date().toISOString(); }
   function money(cents){
     return 'R$ ' + ((cents||0) / 100).toFixed(2).replace('.', ',');
   }
 
   const orderStatusLabels = {
-    cart_confirmed: 'Contato pendente',
-    contacted: 'Contato realizado',
     payment_pending: 'Aguardando pagamento',
     paid: 'Pago',
+    shipped: 'A caminho',
     fulfilled: 'Entregue',
     cancelled: 'Cancelado',
     payment_error: 'Erro no pagamento',
@@ -297,6 +309,7 @@
     nowISO,
     money,
     orderStatusLabel,
+    nextOrderId,
 
     // produtos
     getProducts(){ return read(KEYS.products, []); },
@@ -380,7 +393,7 @@
       const totalCents = productsCents + feeCents;
 
       const order = {
-        id: uid('PED').toUpperCase(),
+        id: nextOrderId(orders),
         customerName,
         customerPhone,
         customerEmail: customerEmail || '',
@@ -389,7 +402,7 @@
         productsCents,
         deliveryFeeCents: feeCents,
         totalCents,
-        status: 'cart_confirmed',
+        status: 'payment_pending',
         paymentMethod: paymentMethod || '',
         events: [{ id:uid('ev'), label:'Pedido recebido pela loja online', actor:'Loja', createdAt: nowISO() }],
         createdAt: nowISO(),
