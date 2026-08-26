@@ -285,7 +285,7 @@
         <input type="password" id="loginPassword" required autocomplete="current-password" placeholder="Digite sua senha">
       </div>
       <div id="loginErrorBox"></div>
-      <button type="submit">Entrar no painel</button>
+      <button type="submit">Entrar No Painel</button>
     </form>
     <div class="login-demo">
       Acesso de demonstração:<br>
@@ -317,7 +317,7 @@
     <div class="content-head">
       <div>
         <span class="eyebrow" id="viewEyebrow">PAINEL DE GESTÃO</span>
-        <h2 id="viewTitle">Dashboard</h2>
+        <h2 id="viewTitle">Visão Geral</h2>
       </div>
       <div class="content-actions" id="viewActions"></div>
     </div>
@@ -439,7 +439,7 @@ function renderNav(){
   const nav = document.getElementById('navList');
   nav.innerHTML = navItems.filter(n=>can(n.perm)).map(n =>
     `<button data-view="${n.id}" class="${n.id===currentView?'active':''}"><i>${n.icon}</i>${n.label}</button>`
-  ).join('') + `<a class="store-link" href="index.html" target="_blank"><i>↗</i>Ver a loja</a>`;
+  ).join('') + `<a class="store-link" href="index.html" target="_blank"><i>↗</i>Ver A Loja</a>`;
   nav.querySelectorAll('button[data-view]').forEach(btn=>{
     btn.addEventListener('click', ()=> goTo(btn.dataset.view));
   });
@@ -449,10 +449,10 @@ function goTo(view){
   currentView = view;
   renderNav();
   const titles = {
-    dashboard: ['DASHBOARD','Visão geral'], products:['CATÁLOGO','Produtos e estoque'],
+    dashboard: ['DASHBOARD','Visão Geral'], products:['CATÁLOGO','Produtos E Estoque'],
     orders:['VENDAS','Pedidos'], customers:['RELACIONAMENTO','Clientes'],
-    delivery:['ENTREGA','Fretes por zona'], history:['REGISTRO','Histórico de alterações'],
-    users:['EQUIPE','Usuários e permissões'],
+    delivery:['ENTREGA','Fretes Por Zona'], history:['REGISTRO','Histórico De Alterações'],
+    users:['EQUIPE','Usuários E Permissões'],
   };
   document.getElementById('viewEyebrow').textContent = titles[view][0];
   document.getElementById('viewTitle').textContent = titles[view][1];
@@ -485,8 +485,8 @@ function renderDashboard(body){
 
   body.innerHTML = `
     <div class="kpi-grid">
-      <div class="kpi"><span>Produtos ativos</span><strong>${active.length}</strong><small>no catálogo</small></div>
-      <div class="kpi"><span>Estoque baixo</span><strong>${low}</strong><small>até 3 peças</small></div>
+      <div class="kpi"><span>Produtos Ativos</span><strong>${active.length}</strong><small>no catálogo</small></div>
+      <div class="kpi"><span>Estoque Baixo</span><strong>${low}</strong><small>até 3 peças</small></div>
       <div class="kpi"><span>Esgotados</span><strong>${out}</strong><small>precisam de atenção</small></div>
       <div class="kpi"><span>Pedidos</span><strong>${orders.length}</strong><small>recebidos no total</small></div>
       <div class="kpi"><span>Faturamento</span><strong>${money(revenue)}</strong><small>pedidos pagos</small></div>
@@ -494,11 +494,11 @@ function renderDashboard(body){
     </div>
     ${pendingContact ? `<div class="alert-box"><b>Clientes aguardando contato</b>Há ${pendingContact} pedido(s) sem pagamento ou contato concluído há mais de 15 minutos.</div>` : ''}
     <div class="panel-block">
-      <h3>Pedidos recentes</h3>
+      <h3>Pedidos Recentes</h3>
       ${orders.length ? orders.slice(0,6).map(o=>orderRowHTML(o)).join('') : '<div class="empty-state">Nenhum pedido recebido ainda. Assim que alguém finalizar a sacola na loja, o pedido aparece aqui automaticamente.</div>'}
     </div>
     <div class="panel-block">
-      <h3>Estoque para revisar</h3>
+      <h3>Estoque Para Revisar</h3>
       ${active.filter(p=>p.stockQuantity<=3).length ? `<div class="products-grid">${active.filter(p=>p.stockQuantity<=3).map(p=>productCardHTML(p)).join('')}</div>` : '<div class="empty-state">Nenhuma peça com estoque baixo no momento.</div>'}
     </div>
   `;
@@ -514,7 +514,7 @@ function needsFollowUp(order){
 /* ================= PRODUTOS ================= */
 function renderProducts(body, actions){
   if(can('products_manage')){
-    actions.innerHTML = `<button class="btn primary" id="newProductBtn">＋ Novo produto</button>`;
+    actions.innerHTML = `<button class="btn primary" id="newProductBtn">＋ Novo Produto</button>`;
   }
   const products = S.getProducts().filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()));
   body.innerHTML = `
@@ -595,7 +595,7 @@ function openProductModal(product){
   const isNew = !product;
   const p = product || { id:S.uid('p'), cat:'basicas', tag:'Camiseta', name:'', desc:'', priceCents:0, stockQuantity:0, status:'active', sku:'', svg:'<circle cx="50" cy="50" r="28" stroke="#f3ede1" stroke-width="2" fill="none"/>', image:'', sizes:['P','M','G','GG'] };
   showModal(`
-    <header><h3>${isNew?'Novo produto':'Editar produto'}</h3><button class="close" id="mClose">×</button></header>
+    <header><h3>${isNew?'Novo Produto':'Editar Produto'}</h3><button class="close" id="mClose">×</button></header>
     <div class="modal-body">
       <div class="grid2">
         <div class="field wide"><label>Nome</label><input id="fName" value="${escapeAttr(p.name)}" placeholder="Ex.: Ave Maria — Manuscrito"></div>
@@ -616,7 +616,7 @@ function openProductModal(product){
           </select>
         </div>
         <div class="field wide">
-          <label>Foto do produto (JPG ou PNG)</label>
+          <label>Foto Do Produto (JPG ou PNG)</label>
           <input type="file" id="fImageFile" accept="image/jpeg,image/png">
           <div id="fImagePreviewWrap" style="margin-top:10px; ${p.image ? '' : 'display:none;'}">
             <img id="fImagePreview" src="${escapeAttr(p.image||'')}" style="max-width:140px; max-height:140px; border:1px solid var(--panel-line); display:block; object-fit:cover;">
@@ -624,7 +624,7 @@ function openProductModal(product){
           </div>
           <input type="hidden" id="fImage" value="${escapeAttr(p.image||'')}">
         </div>
-        <div class="field wide"><label>Tamanhos disponíveis (separados por vírgula)</label><input id="fSizes" value="${escapeAttr((p.sizes && p.sizes.length ? p.sizes : ['P','M','G','GG']).join(', '))}" placeholder="P, M, G, GG"></div>
+        <div class="field wide"><label>Tamanhos Disponíveis (Separados Por Vírgula)</label><input id="fSizes" value="${escapeAttr((p.sizes && p.sizes.length ? p.sizes : ['P','M','G','GG']).join(', '))}" placeholder="P, M, G, GG"></div>
         <div class="field wide"><label>Descrição</label><textarea id="fDesc" rows="3" placeholder="Descrição exibida na loja">${escapeHtml(p.desc)}</textarea></div>
       </div>
       <div class="field-hint">A foto é redimensionada e comprimida automaticamente ao carregar. Se preferir manter o símbolo de linha fina padrão, não carregue nenhuma imagem.</div>
@@ -725,7 +725,7 @@ function openProductModal(product){
 /* ================= PEDIDOS ================= */
 function renderOrders(body, actions){
   const orders = S.getOrders();
-  actions.innerHTML = `<button class="btn primary" id="newOrderBtn">＋ Gerar pedido</button>`;
+  actions.innerHTML = `<button class="btn primary" id="newOrderBtn">＋ Gerar Pedido</button>`;
   const followUp = orders.filter(needsFollowUp).length;
   const awaiting = orders.filter(o=>o.status==='payment_pending').length;
   const paid = orders.filter(o=>['paid','fulfilled'].includes(o.status)).length;
@@ -733,8 +733,8 @@ function renderOrders(body, actions){
   body.innerHTML = `
     ${followUp ? `<div class="alert-box"><b>Clientes aguardando contato</b>Há pedidos sem pagamento ou contato concluído há mais de 15 minutos. Use o WhatsApp cadastrado para recontato.</div>` : ''}
     <div class="kpi-grid">
-      <div class="kpi"><span>Contato pendente</span><strong>${followUp}</strong></div>
-      <div class="kpi"><span>Aguardando pagamento</span><strong>${awaiting}</strong></div>
+      <div class="kpi"><span>Contato Pendente</span><strong>${followUp}</strong></div>
+      <div class="kpi"><span>Aguardando Pagamento</span><strong>${awaiting}</strong></div>
       <div class="kpi"><span>Pagos</span><strong>${paid}</strong></div>
       <div class="kpi"><span>Faturamento</span><strong>${money(revenue)}</strong></div>
     </div>
@@ -773,8 +773,8 @@ function openOrderModal(order){
     <div class="modal-body">
       <div class="grid2">
         <div class="field"><label>WhatsApp</label><input value="${escapeAttr(order.customerPhone)}" disabled></div>
-        <div class="field"><label>Data do pedido</label><input value="${new Date(order.createdAt).toLocaleString('pt-BR')}" disabled></div>
-        <div class="field"><label>Situação do pedido</label>
+        <div class="field"><label>Data Do Pedido</label><input value="${new Date(order.createdAt).toLocaleString('pt-BR')}" disabled></div>
+        <div class="field"><label>Situação Do Pedido</label>
           <select id="fStatus">
             <option value="payment_pending" ${order.status==='payment_pending'?'selected':''}>Aguardando pagamento</option>
             <option value="paid" ${order.status==='paid'?'selected':''}>Pago — baixar estoque</option>
@@ -783,7 +783,7 @@ function openOrderModal(order){
             <option value="cancelled" ${order.status==='cancelled'?'selected':''}>Cancelado</option>
           </select>
         </div>
-        <div class="field"><label>Forma de pagamento</label>
+        <div class="field"><label>Forma De Pagamento</label>
           <select id="fPay">
             <option value="" ${!order.paymentMethod?'selected':''}>Não informado</option>
             <option ${order.paymentMethod==='PIX'?'selected':''}>PIX</option>
@@ -885,16 +885,16 @@ function renderManualOrderModal(products, customers){
     return s + (p? p.priceCents*it.qty : 0);
   }, 0);
   showModal(`
-    <header><div><span class="eyebrow">VENDA DIRETA</span><h3>Gerar novo pedido</h3></div><button class="close" id="mClose">×</button></header>
+    <header><div><span class="eyebrow">VENDA DIRETA</span><h3>Gerar Novo Pedido</h3></div><button class="close" id="mClose">×</button></header>
     <div class="modal-body">
-      <div class="field"><label>Cliente já cadastrado</label>
+      <div class="field"><label>Cliente Já Cadastrado</label>
         <select id="fCustomer">
           <option value="">Cadastrar novo cliente</option>
           ${customers.map(c=>`<option value="${c.id}" ${d.customerId===c.id?'selected':''}>${escapeHtml(c.name)} · ${escapeHtml(c.phone)}</option>`).join('')}
         </select>
       </div>
       <div class="grid2">
-        <div class="field"><label>Nome do cliente</label><input id="fCName" value="${escapeAttr(d.customerName)}" placeholder="Nome completo"></div>
+        <div class="field"><label>Nome Do Cliente</label><input id="fCName" value="${escapeAttr(d.customerName)}" placeholder="Nome completo"></div>
         <div class="field"><label>WhatsApp</label><input id="fCPhone" value="${escapeAttr(d.customerPhone)}" placeholder="(00) 00000-0000"></div>
       </div>
       <h3 style="margin:18px 0 10px; font-size:1.02rem;">Itens do pedido</h3>
@@ -902,7 +902,7 @@ function renderManualOrderModal(products, customers){
         ${d.items.map((it,i)=>manualItemRowHTML(it,i,products)).join('')}
       </div>
       <button class="btn" id="addItemBtn" style="margin-bottom:16px;">＋ Adicionar peça</button>
-      <div class="field"><label>Forma de pagamento</label>
+      <div class="field"><label>Forma De Pagamento</label>
         <select id="fPayment">
           <option value="PIX" ${d.paymentMethod==='PIX'?'selected':''}>PIX</option>
           <option value="Dinheiro" ${d.paymentMethod==='Dinheiro'?'selected':''}>Dinheiro</option>
@@ -1003,8 +1003,8 @@ function renderCustomers(body, actions){
 
   body.innerHTML = `
     <div class="kpi-grid">
-      <div class="kpi"><span>Total de clientes</span><strong>${total}</strong></div>
-      <div class="kpi"><span>Já compraram</span><strong>${buyers}</strong></div>
+      <div class="kpi"><span>Total De Clientes</span><strong>${total}</strong></div>
+      <div class="kpi"><span>Já Compraram</span><strong>${buyers}</strong></div>
       <div class="kpi"><span>Faturamento</span><strong>${money(revenue)}</strong></div>
     </div>
     <div class="search-row" style="margin-bottom:18px;"><input type="text" id="custSearch" placeholder="Buscar por nome ou WhatsApp" value="${escapeAttr(customerSearch)}"></div>
@@ -1084,11 +1084,11 @@ function customerDetailHTML(c){
           <a href="tel:+55${c.phone.replace(/\\D/g,'')}">Ligar</a>
         </div>
         <div style="margin-top:16px;">
-          <label>Notas internas</label>
+          <label>Notas Internas</label>
           <textarea id="custNotes" rows="2">${escapeHtml(c.internalNotes||'')}</textarea>
         </div>
         <div style="margin-top:12px;">
-          <label>Próximo contato</label>
+          <label>Próximo Contato</label>
           <input type="date" id="custNextContact" value="${(c.nextContactAt||'').slice(0,10)}">
         </div>
         <button class="btn primary" id="saveRelationship" style="margin-top:14px;">Salvar relacionamento</button>
@@ -1155,7 +1155,7 @@ function renderHistory(body){
 
 /* ================= USUÁRIOS ================= */
 function renderUsers(body, actions){
-  actions.innerHTML = `<button class="btn primary" id="newUserBtn">＋ Novo usuário</button>`;
+  actions.innerHTML = `<button class="btn primary" id="newUserBtn">＋ Novo Usuário</button>`;
   const users = S.getUsers();
   body.innerHTML = `<div class="users-grid">${users.map(u=>userCardHTML(u)).join('')}</div>`;
   document.getElementById('newUserBtn').addEventListener('click', ()=> openUserModal());
@@ -1179,7 +1179,7 @@ function userCardHTML(u){
       <div class="perms">${perms.map(p=>`<span>${permissionLabels[p][0]}</span>`).join('')}</div>
       <footer>
         <small class="${u.status}">${u.status==='active'?'● ATIVO':'○ INATIVO'}</small>
-        <button data-edit-user="${u.id}">Editar acesso</button>
+        <button data-edit-user="${u.id}">Editar Acesso</button>
       </footer>
     </div>`;
 }
@@ -1188,10 +1188,10 @@ function openUserModal(user){
   const isNew = !user;
   const u = user || { id:S.uid('u'), name:'', email:'', password:'', role:'editor', status:'active', permissions:['stock_manage'] };
   showModal(`
-    <header><h3>${isNew?'Novo usuário':'Editar acesso'}</h3><button class="close" id="mClose">×</button></header>
+    <header><h3>${isNew?'Novo Usuário':'Editar Acesso'}</h3><button class="close" id="mClose">×</button></header>
     <div class="modal-body">
       <div class="grid2">
-        <div class="field wide"><label>Nome completo</label><input id="fName" value="${escapeAttr(u.name)}"></div>
+        <div class="field wide"><label>Nome Completo</label><input id="fName" value="${escapeAttr(u.name)}"></div>
         <div class="field wide"><label>E-mail</label><input id="fEmail" type="email" value="${escapeAttr(u.email)}"></div>
         <div class="field"><label>Perfil</label>
           <select id="fRole">
@@ -1205,7 +1205,7 @@ function openUserModal(user){
             <option value="inactive" ${u.status==='inactive'?'selected':''}>Inativo</option>
           </select>
         </div>
-        <div class="field wide"><label>${isNew?'Senha inicial':'Nova senha (opcional)'}</label><input id="fPassword" type="password" placeholder="${isNew?'Mínimo 8 caracteres':'Deixe em branco para manter a atual'}"></div>
+        <div class="field wide"><label>${isNew?'Senha Inicial':'Nova Senha (Opcional)'}</label><input id="fPassword" type="password" placeholder="${isNew?'Mínimo 8 caracteres':'Deixe em branco para manter a atual'}"></div>
       </div>
       <p class="eyebrow" style="margin:18px 0 8px;">PERMISSÕES</p>
       <div id="permList">
