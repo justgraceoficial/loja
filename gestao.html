@@ -810,6 +810,7 @@ function openOrderModal(order){
       </div>
     </div>
     <footer>
+      <button class="btn danger" id="mDeleteOrder" style="margin-right:auto;">Excluir pedido</button>
       <button class="btn danger" id="mCancelOrder" ${order.status==='cancelled'?'disabled':''}>Cancelar pedido</button>
       <button class="btn" id="mClose2">Fechar</button>
       <button class="btn primary" id="mSave">Salvar andamento</button>
@@ -817,6 +818,13 @@ function openOrderModal(order){
   `, 'wide');
   document.getElementById('mClose').addEventListener('click', closeModal);
   document.getElementById('mClose2').addEventListener('click', closeModal);
+  document.getElementById('mDeleteOrder').addEventListener('click', ()=>{
+    if(!confirm(`Excluir DEFINITIVAMENTE o pedido ${order.id}? Isso não pode ser desfeito.`)) return;
+    const orders = S.getOrders().filter(o=>o.id!==order.id);
+    S.saveOrders(orders);
+    S.addAudit('order_delete', `Pedido ${order.id} excluído definitivamente.`, session.name);
+    closeModal(); renderView();
+  });
   document.getElementById('mCancelOrder').addEventListener('click', ()=>{
     if(!confirm(`Cancelar o pedido ${order.id}? Esta ação ficará registrada no histórico.`)) return;
     updateOrderStatus(order, 'cancelled', order.paymentMethod, 'Pedido cancelado.');
