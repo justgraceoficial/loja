@@ -1148,6 +1148,19 @@ function renderDelivery(body){
   const zones = [...new Set(fees.map(f=>f.zone))];
   body.innerHTML = `
     <div class="field-hint" style="margin-bottom:20px;">Os valores abaixo alimentam automaticamente o cálculo de frete da loja por zona de entrega.</div>
+    ${can('delivery_manage') ? `
+    <div class="panel-block" style="margin-bottom:24px;">
+      <h3>Adicionar Vários Bairros De Uma Vez</h3>
+      <div class="grid2">
+        <div class="field"><label>Zona</label>
+          <input type="text" id="fBulkZone" list="fZoneList" placeholder="Ex: João Pessoa">
+          <datalist id="fZoneList">${zones.map(z=>`<option value="${escapeAttr(z)}">`).join('')}</datalist>
+        </div>
+        <div class="field"><label>Frete Padrão (R$) — Opcional</label><input type="number" id="fBulkFee" min="0" step="0.01" placeholder="0,00"></div>
+        <div class="field wide"><label>Bairros (Um Por Linha)</label><textarea id="fBulkNeighborhoods" rows="6" placeholder="Bessa&#10;Tambaú&#10;Manaíra"></textarea></div>
+      </div>
+      <button class="btn primary" id="fBulkAdd" style="margin-top:6px;">＋ Adicionar Bairros</button>
+    </div>` : ''}
     <div class="delivery-zones">
       ${zones.map(zone => `
         <div class="zone-card">
@@ -1159,6 +1172,7 @@ function renderDelivery(body){
                 <span>R$</span>
                 <input type="number" min="0" step="0.01" data-id="${f.id}" value="${(f.feeCents/100).toFixed(2)}" ${can('delivery_manage')?'':'disabled'}>
                 ${can('delivery_manage') ? `<button data-save="${f.id}">Salvar</button>` : ''}
+                ${can('delivery_manage') ? `<button data-remove="${f.id}" style="color:var(--danger);">×</button>` : ''}
               </div>
             </div>`).join('')}
         </div>`).join('')}
@@ -1178,6 +1192,42 @@ function renderDelivery(body){
       setTimeout(()=> btn.textContent='Salvar', 1400);
     });
   });
+  body.querySelectorAll('[data-remove]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = Number(btn.dataset.remove);
+      let fees = S.getDeliveryFees();
+      const f = fees.find(x=>x.id===id);
+      if(!f) return;
+      if(!confirm(`Remover "${f.neighborhood}" da lista de fretes?`)) return;
+      fees = fees.filter(x=>x.id!==id);
+      S.saveDeliveryFees(fees);
+      S.addAudit('delivery_remove', `Bairro ${f.neighborhood} removido dos fretes.`, session.name);
+      renderView();
+    });
+  });
+  const bulkBtn = document.getElementById('fBulkAdd');
+  if(bulkBtn){
+    bulkBtn.addEventListener('click', ()=>{
+      const zone = document.getElementById('fBulkZone').value.trim();
+      const feeCents = Math.max(0, Math.round(Number(document.getElementById('fBulkFee').value||0)*100));
+      const names = document.getElementById('fBulkNeighborhoods').value
+        .split('\n').map(s=>s.trim()).filter(Boolean);
+      if(!zone){ alert('Informe a zona (ex: João Pessoa).'); return; }
+      if(!names.length){ alert('Cole ao menos um bairro, um por linha.'); return; }
+      const fees = S.getDeliveryFees();
+      let nextId = fees.reduce((max,f)=> Math.max(max, Number(f.id)||0), 0) + 1;
+      let added = 0;
+      names.forEach(neighborhood=>{
+        const exists = fees.some(f=>f.zone===zone && f.neighborhood.toLowerCase()===neighborhood.toLowerCase());
+        if(exists) return;
+        fees.push({ id: nextId++, zone, neighborhood, feeCents });
+        added++;
+      });
+      S.saveDeliveryFees(fees);
+      S.addAudit('delivery_bulk_add', `${added} bairro(s) adicionados à zona ${zone}.`, session.name);
+      renderView();
+    });
+  }
 }
 
 /* ================= HISTÓRICO ================= */
@@ -1331,6 +1381,7 @@ function escapeAttr(str){ return escapeHtml(str); }
       JGStore.syncWaitlist ? JGStore.syncWaitlist() : null,
       JGStore.syncProducts ? JGStore.syncProducts() : null,
       JGStore.syncUsers ? JGStore.syncUsers() : null,
+      JGStore.syncDelivery ? JGStore.syncDelivery() : null,
     ]);
     if(typeof renderView === 'function') renderView();
     const hora = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });

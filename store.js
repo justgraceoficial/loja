@@ -151,6 +151,8 @@
   const pullWaitlistFromServer = ()    => pullListFromServer('waitlist', KEYS.waitlist);
   const pushProductsToServer  = (list) => pushListToServer('products', list);
   const pullProductsFromServer = ()    => pullListFromServer('products', KEYS.products);
+  const pushDeliveryToServer  = (list) => pushListToServer('delivery', list);
+  const pullDeliveryFromServer = ()    => pullListFromServer('delivery', KEYS.delivery);
   const pushUsersToServer     = (list) => pushListToServer('users', list);
   const pullUsersFromServer   = ()     => pullListFromServer('users', KEYS.users);
 
@@ -377,6 +379,7 @@
     syncCustomers: pullCustomersFromServer,
     syncWaitlist: pullWaitlistFromServer,
     syncProducts: pullProductsFromServer,
+    syncDelivery: pullDeliveryFromServer,
     syncUsers: pullUsersFromServer,
     requestOnlinePayment,
 
@@ -386,7 +389,7 @@
 
     // fretes
     getDeliveryFees(){ return read(KEYS.delivery, []); },
-    saveDeliveryFees(list){ write(KEYS.delivery, list); },
+    saveDeliveryFees(list){ write(KEYS.delivery, list); pushDeliveryToServer(list); },
 
     // calcula o frete a partir do texto do bairro digitado pelo cliente
     quoteDelivery(neighborhoodText){
