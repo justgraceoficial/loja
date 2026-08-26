@@ -532,6 +532,7 @@
   <div class="hero-cta">
     <a href="#catalogo" data-view="home" class="btn-primary">Ver catálogo</a>
     <a href="#" data-view="sobre" class="btn-ghost">Sobre Nós</a>
+    <a href="rastreio.html" target="_blank" rel="noopener" class="btn-ghost">Acompanhar Meu Pedido</a>
   </div>
   <div class="hero-verse italic-serif">"A minha graça te basta, porque é na fraqueza que se manifesta plenamente a minha força" — 2 Coríntios 12,9</div>
 </section>
@@ -679,6 +680,7 @@
       <span class="eyebrow">Pedido recebido</span>
       <strong id="checkoutOrderId"></strong>
       <p class="hint">Recebemos seu pedido e já avisamos nossa equipe. Em instantes falamos com você pelo WhatsApp para confirmar pagamento e entrega.</p>
+      <a href="#" id="checkoutTrackingLink" target="_blank" rel="noopener" style="display:block; text-align:center; color:var(--gold-bright); font-size:0.82rem; letter-spacing:0.06em; text-transform:uppercase; border-bottom:1px solid var(--faint); padding-bottom:6px; margin-bottom:22px; width:fit-content; margin-left:auto; margin-right:auto;">Acompanhar meu pedido</a>
       <div class="checkout-actions">
         <button type="button" class="checkout-confirm" id="checkoutClose" style="width:100%;">Continuar navegando</button>
       </div>
@@ -1128,8 +1130,13 @@ function validateCheckout(){
   };
 }
 
+function trackingUrl(orderId){
+  return window.location.origin + window.location.pathname.replace(/index\.html$/, '') + 'rastreio.html?pedido=' + encodeURIComponent(orderId);
+}
+
 function finishCheckoutUI(order){
   document.getElementById('checkoutOrderId').textContent = 'Pedido ' + order.id;
+  document.getElementById('checkoutTrackingLink').href = trackingUrl(order.id);
   checkoutStepForm.style.display = 'none';
   checkoutStepDone.style.display = 'block';
   cart = [];
@@ -1149,7 +1156,7 @@ document.getElementById('checkoutConfirmWhats').addEventListener('click', ()=>{
   const feeText = data.deliveryFeeCents ? formatPrice(data.deliveryFeeCents/100) : (currentQuote && currentQuote.matched ? 'Grátis' : 'A combinar');
   const totalText = formatPrice((order.totalCents||0)/100);
   const addr = `${data.address.street}, ${data.address.number} · ${data.address.neighborhood} · ${data.address.city}/${data.address.state}`;
-  const message = `Olá! Quero confirmar o pedido ${order.id} na Just Grace:\n\n${productsList}\n\nFrete: ${feeText}\nTotal: ${totalText}\n\nNome: ${data.customerName}\nEndereço: ${addr}`;
+  const message = `Olá! Quero confirmar o pedido ${order.id} na Just Grace:\n\n${productsList}\n\nFrete: ${feeText}\nTotal: ${totalText}\n\nNome: ${data.customerName}\nEndereço: ${addr}\n\nAcompanhar meu pedido: ${trackingUrl(order.id)}`;
   finishCheckoutUI(order);
   window.open('https://wa.me/?text=' + encodeURIComponent(message), '_blank', 'noopener,noreferrer');
 });

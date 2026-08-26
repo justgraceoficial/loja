@@ -210,8 +210,9 @@
 
   const orderStatusLabels = {
     payment_pending: 'Aguardando pagamento',
-    paid: 'Pago',
-    shipped: 'A caminho',
+    paid: 'Pagamento Confirmado',
+    preparing: 'Produto em Separação',
+    shipped: 'A Caminho',
     fulfilled: 'Entregue',
     cancelled: 'Cancelado',
     payment_error: 'Erro no pagamento',

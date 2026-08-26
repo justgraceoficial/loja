@@ -480,7 +480,7 @@ function renderDashboard(body){
   const active = products.filter(p=>p.status==='active');
   const low = active.filter(p=>p.stockQuantity>0 && p.stockQuantity<=3).length;
   const out = active.filter(p=>p.stockQuantity===0).length;
-  const revenue = orders.filter(o=>['paid','fulfilled'].includes(o.status)).reduce((s,o)=>s+o.totalCents,0);
+  const revenue = orders.filter(o=>['paid','preparing','shipped','fulfilled'].includes(o.status)).reduce((s,o)=>s+o.totalCents,0);
   const pendingContact = orders.filter(o=>needsFollowUp(o)).length;
 
   body.innerHTML = `
@@ -728,8 +728,8 @@ function renderOrders(body, actions){
   actions.innerHTML = `<button class="btn primary" id="newOrderBtn">＋ Gerar Pedido</button>`;
   const followUp = orders.filter(needsFollowUp).length;
   const awaiting = orders.filter(o=>o.status==='payment_pending').length;
-  const paid = orders.filter(o=>['paid','fulfilled'].includes(o.status)).length;
-  const revenue = orders.filter(o=>['paid','fulfilled'].includes(o.status)).reduce((s,o)=>s+o.totalCents,0);
+  const paid = orders.filter(o=>['paid','preparing','shipped','fulfilled'].includes(o.status)).length;
+  const revenue = orders.filter(o=>['paid','preparing','shipped','fulfilled'].includes(o.status)).reduce((s,o)=>s+o.totalCents,0);
   body.innerHTML = `
     ${followUp ? `<div class="alert-box"><b>Clientes aguardando contato</b>Há pedidos sem pagamento ou contato concluído há mais de 15 minutos. Use o WhatsApp cadastrado para recontato.</div>` : ''}
     <div class="kpi-grid">
@@ -776,11 +776,12 @@ function openOrderModal(order){
         <div class="field"><label>Data Do Pedido</label><input value="${new Date(order.createdAt).toLocaleString('pt-BR')}" disabled></div>
         <div class="field"><label>Situação Do Pedido</label>
           <select id="fStatus">
-            <option value="payment_pending" ${order.status==='payment_pending'?'selected':''}>Aguardando pagamento</option>
-            <option value="paid" ${order.status==='paid'?'selected':''}>Pago — baixar estoque</option>
-            <option value="shipped" ${order.status==='shipped'?'selected':''}>A caminho</option>
+            <option value="paid" ${order.status==='paid'?'selected':''}>Pagamento Confirmado</option>
+            <option value="preparing" ${order.status==='preparing'?'selected':''}>Produto em Separação</option>
+            <option value="shipped" ${order.status==='shipped'?'selected':''}>A Caminho</option>
             <option value="fulfilled" ${order.status==='fulfilled'?'selected':''}>Entregue</option>
-            <option value="cancelled" ${order.status==='cancelled'?'selected':''}>Cancelado</option>
+            ${order.status==='payment_pending' ? `<option value="payment_pending" selected disabled>Aguardando pagamento</option>` : ''}
+            ${order.status==='cancelled' ? `<option value="cancelled" selected disabled>Cancelado</option>` : ''}
           </select>
         </div>
         <div class="field"><label>Forma De Pagamento</label>
@@ -840,8 +841,8 @@ function updateOrderStatus(order, status, paymentMethod, label){
   const orders = S.getOrders();
   const idx = orders.findIndex(o=>o.id===order.id);
   if(idx<0) return;
-  const wasPaid = ['paid','fulfilled'].includes(orders[idx].status);
-  const nowPaid = ['paid','fulfilled'].includes(status);
+  const wasPaid = ['paid','preparing','shipped','fulfilled'].includes(orders[idx].status);
+  const nowPaid = ['paid','preparing','shipped','fulfilled'].includes(status);
   orders[idx].status = status;
   orders[idx].paymentMethod = paymentMethod;
   orders[idx].events = orders[idx].events || [];
@@ -1023,7 +1024,7 @@ function renderCustomers(body, actions){
 
 function enrichCustomer(c, orders){
   const custOrders = orders.filter(o=>o.customerPhone===c.phone);
-  const paidOrders = custOrders.filter(o=>['paid','fulfilled'].includes(o.status));
+  const paidOrders = custOrders.filter(o=>['paid','preparing','shipped','fulfilled'].includes(o.status));
   const revenueCents = paidOrders.reduce((s,o)=>s+o.totalCents,0);
   const classification = paidOrders.length>=5 ? 'VIP' : paidOrders.length>=3 ? 'Recorrente' : paidOrders.length>=1 ? 'Ativo' : 'Novo';
   return { ...c, orders:custOrders, paidOrders:paidOrders.length, revenueCents, classification };
