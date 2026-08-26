@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teste de conexão — Just Grace</title>
+<style>
+  body{ font-family: -apple-system, sans-serif; background:#111; color:#eee; padding:24px; }
+  button{ display:block; width:100%; padding:16px; margin:10px 0; font-size:16px; background:#f3ede1; border:none; border-radius:6px; }
+  pre{ background:#000; color:#0f0; padding:14px; white-space:pre-wrap; word-break:break-all; border-radius:6px; font-size:13px; }
+  h3{ margin-top:24px; }
+</style>
+</head>
+<body>
+<h2>Teste de conexão (JSONP) com o Apps Script</h2>
+<p>URL testada:<br><code id="urlShown" style="font-size:12px;"></code></p>
+
+<button onclick="testarJSONP()">1. Testar leitura (JSONP)</button>
+<button onclick="testarFormPost()">2. Testar escrita (formulário)</button>
+
+<h3>Resultado:</h3>
+<pre id="out">(clique em um botão acima)</pre>
+
+<script>
+const API = 'https://script.google.com/macros/s/AKfycbyGcxOsLFyuf6r05ZHuJEv97nLUPfH-m04_kRtCkDtmsGrygS7psmzfJ4-ObmHRdqUJWA/exec';
+const TOKEN = 'jgSec9rX4mNqT2wZ';
+document.getElementById('urlShown').textContent = API;
+
+function log(msg){
+  document.getElementById('out').textContent = msg;
+}
+
+let counter = 0;
+function jsonpRequest(url, timeoutMs){
+  return new Promise((resolve, reject) => {
+    const cbName = 'cb_' + Date.now() + '_' + (counter++);
+    const script = document.createElement('script');
+    let settled = false;
+    const timer = setTimeout(() => {
+      if(settled) return;
+      settled = true;
+      cleanup();
+      reject(new Error('tempo esgotado'));
+    }, timeoutMs || 15000);
+    function cleanup(){
+      clearTimeout(timer);
+      delete window[cbName];
+      if(script.parentNode) script.parentNode.removeChild(script);
+    }
+    window[cbName] = (data) => {
+      if(settled) return;
+      settled = true;
+      cleanup();
+      resolve(data);
+    };
+    script.onerror = () => {
+      if(settled) return;
+      settled = true;
+      cleanup();
+      reject(new Error('falha ao carregar o script'));
+    };
+    script.src = url + (url.indexOf('?') > -1 ? '&' : '?') + 'callback=' + cbName;
+    document.head.appendChild(script);
+  });
+}
+
+async function testarJSONP(){
+  log('Testando JSONP...');
+  try{
+    const data = await jsonpRequest(API + '?token=' + TOKEN + '&type=products');
+    log('SUCESSO (JSONP)\n\n' + JSON.stringify(data, null, 2).slice(0, 800));
+  }catch(err){
+    log('ERRO (JSONP)\n\nNome: ' + err.name + '\nMensagem: ' + err.message);
+  }
+}
+
+function testarFormPost(){
+  log('Enviando formulário de teste (lista de espera vazia, não altera nada real)...');
+  const frameName = 'testframe_' + Date.now();
+  const iframe = document.createElement('iframe');
+  iframe.name = frameName;
+  iframe.style.display = 'none';
+  document.body.appendChild(iframe);
+
+  const form = document.createElement('form');
+  form.action = API;
+  form.method = 'POST';
+  form.target = frameName;
+  form.style.display = 'none';
+
+  function addField(name, value){
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = name;
+    input.value = value;
+    form.appendChild(input);
+  }
+  addField('token', TOKEN);
+  addField('type', '__teste_conexao');
+
+  document.body.appendChild(form);
+  form.submit();
+
+  setTimeout(() => {
+    log('Formulário enviado sem erro de JavaScript.\n\nComo não dá pra ler a resposta de um formulário cross-site, isso não confirma 100% que funcionou no servidor — mas confirma que o navegador CONSEGUIU enviar a requisição sem bloqueio de CORS (o que já é a parte que estava falhando antes).');
+    form.remove();
+    iframe.remove();
+  }, 2000);
+}
+</script>
+</body>
+</html>
