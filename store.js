@@ -143,6 +143,8 @@
   const pullWaitlistFromServer = ()    => pullListFromServer('waitlist', KEYS.waitlist);
   const pushProductsToServer  = (list) => pushListToServer('products', list);
   const pullProductsFromServer = ()    => pullListFromServer('products', KEYS.products);
+  const pushUsersToServer     = (list) => pushListToServer('users', list);
+  const pullUsersFromServer   = ()     => pullListFromServer('users', KEYS.users);
 
   // pede ao Apps Script para abrir um pagamento online (PIX ou cartão via Mercado Pago).
   // method: 'pix' ou 'card' — restringe a forma de pagamento na página do Mercado Pago.
@@ -322,11 +324,12 @@
     syncCustomers: pullCustomersFromServer,
     syncWaitlist: pullWaitlistFromServer,
     syncProducts: pullProductsFromServer,
+    syncUsers: pullUsersFromServer,
     requestOnlinePayment,
 
     // usuários
     getUsers(){ return read(KEYS.users, []); },
-    saveUsers(list){ write(KEYS.users, list); },
+    saveUsers(list){ write(KEYS.users, list); pushUsersToServer(list); },
 
     // fretes
     getDeliveryFees(){ return read(KEYS.delivery, []); },

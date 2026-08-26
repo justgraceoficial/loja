@@ -334,6 +334,13 @@
 const S = window.JGStore;
 const money = S.money;
 
+// busca a lista de usuários mais recente assim que a página abre, para que
+// contas criadas em outro dispositivo já funcionem no primeiro login aqui.
+let usersSyncPromise = Promise.resolve();
+if(S.isSyncConfigured && S.isSyncConfigured()){
+  usersSyncPromise = S.syncUsers();
+}
+
 /* ================= STATE ================= */
 let session = S.getSession();
 let currentView = 'dashboard';
@@ -367,26 +374,41 @@ function can(perm){
 }
 
 /* ================= LOGIN ================= */
-document.getElementById('loginForm').addEventListener('submit', e=>{
+document.getElementById('loginForm').addEventListener('submit', async e=>{
   e.preventDefault();
-  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
-  const pass = document.getElementById('loginPassword').value;
-  const users = S.getUsers();
-  const user = users.find(u => u.email.toLowerCase() === email);
   const box = document.getElementById('loginErrorBox');
   box.innerHTML = '';
-  if(!user || user.password !== pass){
-    box.innerHTML = '<div class="login-error">E-mail ou senha inválidos.</div>';
-    return;
+  const submitBtn = e.target.querySelector('button[type="submit"], input[type="submit"]');
+  if(submitBtn) submitBtn.disabled = true;
+  try{
+    // espera a busca de usuários mais recentes terminar, com um limite de
+    // 4s pra não travar o login se a rede estiver lenta/fora do ar.
+    await Promise.race([
+      usersSyncPromise,
+      new Promise(resolve => setTimeout(resolve, 4000)),
+    ]);
+    const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+    const pass = document.getElementById('loginPassword').value;
+    const users = S.getUsers().filter(u => u && u.email);
+    const user = users.find(u => String(u.email).toLowerCase() === email);
+    if(!user || user.password !== pass){
+      box.innerHTML = '<div class="login-error">E-mail ou senha inválidos.</div>';
+      return;
+    }
+    if(user.status !== 'active'){
+      box.innerHTML = '<div class="login-error">Este acesso está inativo. Fale com um administrador.</div>';
+      return;
+    }
+    session = { id:user.id, name:user.name, email:user.email, role:user.role, permissions:user.permissions||[] };
+    S.setSession(session);
+    S.addAudit('login', `${user.name} entrou no painel.`, user.name);
+    boot();
+  }catch(err){
+    console.error('Erro no login:', err);
+    box.innerHTML = '<div class="login-error">Ocorreu um erro ao entrar. Veja o console (F12) ou avise o suporte.</div>';
+  }finally{
+    if(submitBtn) submitBtn.disabled = false;
   }
-  if(user.status !== 'active'){
-    box.innerHTML = '<div class="login-error">Este acesso está inativo. Fale com um administrador.</div>';
-    return;
-  }
-  session = { id:user.id, name:user.name, email:user.email, role:user.role, permissions:user.permissions };
-  S.setSession(session);
-  S.addAudit('login', `${user.name} entrou no painel.`, user.name);
-  boot();
 });
 
 document.getElementById('logoutBtn').addEventListener('click', ()=>{
@@ -399,13 +421,18 @@ document.getElementById('logoutBtn').addEventListener('click', ()=>{
 
 /* ================= BOOT / NAV ================= */
 function boot(){
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('appShell').classList.add('open');
-  document.getElementById('userAvatar').textContent = session.name.charAt(0);
-  document.getElementById('userName').textContent = session.name;
-  document.getElementById('userRole').textContent = session.role === 'admin' ? 'Administrador' : 'Usuário com permissões';
-  renderNav();
-  goTo(navItems.some(n=>n.id===currentView && can(n.perm)) ? currentView : 'dashboard');
+  try{
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('appShell').classList.add('open');
+    document.getElementById('userAvatar').textContent = session.name.charAt(0);
+    document.getElementById('userName').textContent = session.name;
+    document.getElementById('userRole').textContent = session.role === 'admin' ? 'Administrador' : 'Usuário com permissões';
+    renderNav();
+    goTo(navItems.some(n=>n.id===currentView && can(n.perm)) ? currentView : 'dashboard');
+  }catch(err){
+    console.error('Erro ao abrir o painel:', err);
+    alert('Entramos, mas houve um erro ao carregar o painel. Veja o console (F12) ou avise o suporte.');
+  }
 }
 if(session) boot();
 
@@ -1255,6 +1282,7 @@ function escapeAttr(str){ return escapeHtml(str); }
       JGStore.syncCustomers ? JGStore.syncCustomers() : null,
       JGStore.syncWaitlist ? JGStore.syncWaitlist() : null,
       JGStore.syncProducts ? JGStore.syncProducts() : null,
+      JGStore.syncUsers ? JGStore.syncUsers() : null,
     ]);
     if(typeof renderView === 'function') renderView();
     const hora = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
