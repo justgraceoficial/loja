@@ -113,6 +113,10 @@
   .kpi small{ font-size:0.74rem; color:var(--faint); }
 
   .panel-block{ background:var(--charcoal); border:1px solid var(--panel-line); padding:24px; margin-bottom:24px; }
+  .data-table{ width:100%; border-collapse:collapse; font-size:0.88rem; }
+  .data-table th{ text-align:left; padding:10px 12px; color:var(--muted); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; border-bottom:1px solid var(--panel-line); }
+  .data-table td{ padding:12px; border-bottom:1px solid var(--panel-line); color:var(--ivory); vertical-align:top; }
+  .data-table tr:last-child td{ border-bottom:none; }
   .panel-block h3{ font-size:1.2rem; margin-bottom:16px; }
   .empty-state{ color:var(--muted); font-size:0.88rem; padding:30px 10px; text-align:center; }
 
@@ -354,6 +358,7 @@ const permissionLabels = {
   stock_manage: ['Controle de estoque', 'Alterar quantidades disponíveis'],
   delivery_manage: ['Fretes', 'Alterar taxas de entrega por zona'],
   users_manage: ['Gestão de usuários', 'Criar contas e definir acessos'],
+  finance_manage: ['Financeiro', 'Registrar e ver custos e despesas'],
 };
 
 const navItems = [
@@ -362,6 +367,7 @@ const navItems = [
   { id: 'orders', label: 'Pedidos', icon: '▤', perm: 'orders_manage' },
   { id: 'customers', label: 'Clientes', icon: '♧', perm: 'orders_manage' },
   { id: 'delivery', label: 'Fretes', icon: '⌖', perm: 'delivery_manage' },
+  { id: 'finance', label: 'Financeiro', icon: '¤', perm: 'finance_manage' },
   { id: 'history', label: 'Histórico', icon: '↺' },
   { id: 'users', label: 'Usuários', icon: '♙', perm: 'users_manage' },
 ];
@@ -451,7 +457,8 @@ function goTo(view){
   const titles = {
     dashboard: ['DASHBOARD','Visão Geral'], products:['CATÁLOGO','Produtos E Estoque'],
     orders:['VENDAS','Pedidos'], customers:['RELACIONAMENTO','Clientes'],
-    delivery:['ENTREGA','Fretes Por Zona'], history:['REGISTRO','Histórico De Alterações'],
+    delivery:['ENTREGA','Fretes Por Zona'], finance:['FINANCEIRO','Custos E Despesas'],
+    history:['REGISTRO','Histórico De Alterações'],
     users:['EQUIPE','Usuários E Permissões'],
   };
   document.getElementById('viewEyebrow').textContent = titles[view][0];
@@ -468,6 +475,7 @@ function renderView(){
   else if(currentView === 'orders'){ renderOrders(body, actions); }
   else if(currentView === 'customers'){ renderCustomers(body, actions); }
   else if(currentView === 'delivery'){ renderDelivery(body); }
+  else if(currentView === 'finance'){ renderFinance(body, actions); }
   else if(currentView === 'history'){ renderHistory(body); }
   else if(currentView === 'users'){ renderUsers(body, actions); }
 }
@@ -1245,6 +1253,105 @@ function renderDelivery(body){
   }
 }
 
+/* ================= FINANCEIRO ================= */
+const EXPENSE_CATEGORIES = ['Matéria-prima', 'Embalagem', 'Frete/Logística', 'Marketing', 'Ferramentas/Assinaturas', 'Taxas e impostos', 'Outros'];
+
+function renderFinance(body, actions){
+  const expenses = S.getExpenses();
+  const now = new Date();
+  const monthKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  const thisMonth = expenses.filter(e => (e.date||'').slice(0,7) === monthKey);
+  const totalMonth = thisMonth.reduce((s,e)=> s + (e.amountCents||0), 0);
+  const totalAll = expenses.reduce((s,e)=> s + (e.amountCents||0), 0);
+  const orders = S.getOrders();
+  const revenueMonth = orders.filter(o => ['paid','preparing','shipped','fulfilled'].includes(o.status) && (o.createdAt||'').slice(0,7) === monthKey)
+    .reduce((s,o)=> s + (o.totalCents||0), 0);
+  const netMonth = revenueMonth - totalMonth;
+
+  actions.innerHTML = can('finance_manage') ? `<button class="btn primary" id="newExpenseBtn">＋ Nova Despesa</button>` : '';
+
+  body.innerHTML = `
+    <div class="kpi-grid">
+      <div class="kpi"><span>Custos Este Mês</span><strong>${money(totalMonth)}</strong><small>${thisMonth.length} lançamento(s)</small></div>
+      <div class="kpi"><span>Faturamento Este Mês</span><strong>${money(revenueMonth)}</strong><small>pedidos pagos</small></div>
+      <div class="kpi"><span>Resultado Do Mês</span><strong style="color:${netMonth>=0?'var(--ok)':'var(--danger)'}">${money(netMonth)}</strong><small>faturamento − custos</small></div>
+      <div class="kpi"><span>Custos No Total</span><strong>${money(totalAll)}</strong><small>desde o início</small></div>
+    </div>
+    <div class="panel-block">
+      <h3>Lançamentos</h3>
+      ${expenses.length ? `
+        <table class="data-table">
+          <thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Valor</th><th></th></tr></thead>
+          <tbody>
+            ${expenses.map(e => `
+              <tr>
+                <td>${e.date ? new Date(e.date+'T00:00:00').toLocaleDateString('pt-BR') : '—'}</td>
+                <td>${escapeHtml(e.description)}${e.notes ? `<br><small style="color:var(--muted);">${escapeHtml(e.notes)}</small>` : ''}</td>
+                <td>${escapeHtml(e.category||'Outros')}</td>
+                <td>${money(e.amountCents)}</td>
+                <td>${can('finance_manage') ? `<button data-remove-expense="${e.id}" style="background:none; border:none; color:var(--danger); cursor:pointer;">×</button>` : ''}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      ` : '<div class="empty-state">Nenhuma despesa registrada ainda. Clique em "＋ Nova Despesa" para começar.</div>'}
+    </div>
+  `;
+
+  const newBtn = document.getElementById('newExpenseBtn');
+  if(newBtn) newBtn.addEventListener('click', openExpenseModal);
+
+  body.querySelectorAll('[data-remove-expense]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.dataset.removeExpense;
+      if(!confirm('Excluir esse lançamento definitivamente?')) return;
+      const list = S.getExpenses().filter(e=>e.id!==id);
+      S.saveExpenses(list);
+      S.addAudit('expense_remove', `Despesa ${id} removida.`, session.name);
+      renderView();
+    });
+  });
+}
+
+function openExpenseModal(){
+  const today = new Date().toISOString().slice(0,10);
+  showModal(`
+    <header><h3>Nova Despesa</h3><button class="close" id="mClose">×</button></header>
+    <div class="modal-body">
+      <div class="grid2">
+        <div class="field wide"><label>Descrição</label><input id="fExpDesc" placeholder="Ex.: Compra de tecido pima"></div>
+        <div class="field"><label>Valor (R$)</label><input id="fExpAmount" type="number" min="0" step="0.01" placeholder="0,00"></div>
+        <div class="field"><label>Data</label><input id="fExpDate" type="date" value="${today}"></div>
+        <div class="field wide"><label>Categoria</label>
+          <select id="fExpCategory">
+            ${EXPENSE_CATEGORIES.map(c=>`<option value="${c}">${c}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field wide"><label>Notas (Opcional)</label><textarea id="fExpNotes" rows="2" placeholder="Detalhes adicionais"></textarea></div>
+      </div>
+    </div>
+    <footer>
+      <button class="btn" id="mCancel">Cancelar</button>
+      <button class="btn primary" id="mSave">Salvar</button>
+    </footer>
+  `);
+  document.getElementById('mClose').addEventListener('click', closeModal);
+  document.getElementById('mCancel').addEventListener('click', closeModal);
+  document.getElementById('mSave').addEventListener('click', ()=>{
+    const description = document.getElementById('fExpDesc').value.trim();
+    const amountCents = Math.round(Number(document.getElementById('fExpAmount').value||0)*100);
+    if(!description){ alert('Informe uma descrição para a despesa.'); return; }
+    if(!amountCents){ alert('Informe um valor maior que zero.'); return; }
+    S.addExpense({
+      description,
+      amountCents,
+      date: document.getElementById('fExpDate').value || today,
+      category: document.getElementById('fExpCategory').value,
+      notes: document.getElementById('fExpNotes').value.trim(),
+    });
+    closeModal(); renderView();
+  });
+}
+
 /* ================= HISTÓRICO ================= */
 function renderHistory(body){
   const audit = S.read(S.KEYS.audit, []);
@@ -1397,6 +1504,7 @@ function escapeAttr(str){ return escapeHtml(str); }
       JGStore.syncProducts ? JGStore.syncProducts() : null,
       JGStore.syncUsers ? JGStore.syncUsers() : null,
       JGStore.syncDelivery ? JGStore.syncDelivery() : null,
+      JGStore.syncExpenses ? JGStore.syncExpenses() : null,
     ]);
     if(typeof renderView === 'function') renderView();
     const hora = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });

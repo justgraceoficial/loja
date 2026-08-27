@@ -11,6 +11,7 @@
     users: 'jg_users',
     delivery: 'jg_delivery_fees',
     waitlist: 'jg_waitlist',
+    expenses: 'jg_expenses',
     session: 'jg_session',
     audit: 'jg_audit',
     seeded: 'jg_seeded_v1',
@@ -153,6 +154,8 @@
   const pullProductsFromServer = ()    => pullListFromServer('products', KEYS.products);
   const pushDeliveryToServer  = (list) => pushListToServer('delivery', list);
   const pullDeliveryFromServer = ()    => pullListFromServer('delivery', KEYS.delivery);
+  const pushExpensesToServer  = (list) => pushListToServer('expenses', list);
+  const pullExpensesFromServer = ()    => pullListFromServer('expenses', KEYS.expenses);
   const pushUsersToServer     = (list) => pushListToServer('users', list);
   const pullUsersFromServer   = ()     => pullListFromServer('users', KEYS.users);
 
@@ -265,7 +268,7 @@
         password: 'justgrace123',
         role: 'admin',
         status: 'active',
-        permissions: ['orders_manage','products_manage','stock_manage','delivery_manage','users_manage'],
+        permissions: ['orders_manage','products_manage','stock_manage','delivery_manage','users_manage','finance_manage'],
         createdAt: nowISO(),
         updatedAt: nowISO(),
       },
@@ -276,7 +279,7 @@
         password: 'Peu19012003',
         role: 'admin',
         status: 'active',
-        permissions: ['orders_manage','products_manage','stock_manage','delivery_manage','users_manage'],
+        permissions: ['orders_manage','products_manage','stock_manage','delivery_manage','users_manage','finance_manage'],
         createdAt: nowISO(),
         updatedAt: nowISO(),
       },
@@ -322,7 +325,7 @@
         password: 'Peu19012003',
         role: 'admin',
         status: 'active',
-        permissions: ['orders_manage','products_manage','stock_manage','delivery_manage','users_manage'],
+        permissions: ['orders_manage','products_manage','stock_manage','delivery_manage','users_manage','finance_manage'],
         createdAt: nowISO(),
         updatedAt: nowISO(),
       });
@@ -380,6 +383,7 @@
     syncWaitlist: pullWaitlistFromServer,
     syncProducts: pullProductsFromServer,
     syncDelivery: pullDeliveryFromServer,
+    syncExpenses: pullExpensesFromServer,
     syncUsers: pullUsersFromServer,
     requestOnlinePayment,
 
@@ -390,6 +394,25 @@
     // fretes
     getDeliveryFees(){ return read(KEYS.delivery, []); },
     saveDeliveryFees(list){ write(KEYS.delivery, list); pushDeliveryToServer(list); },
+
+    // financeiro (custos e despesas)
+    getExpenses(){ return read(KEYS.expenses, []); },
+    saveExpenses(list){ write(KEYS.expenses, list); pushExpensesToServer(list); },
+    addExpense({ description, category, amountCents, date, notes }){
+      const list = this.getExpenses();
+      const entry = {
+        id: uid('desp'),
+        description, category: category || 'Outros',
+        amountCents: amountCents || 0,
+        date: date || nowISO().slice(0,10),
+        notes: notes || '',
+        createdAt: nowISO(),
+      };
+      list.unshift(entry);
+      this.saveExpenses(list);
+      this.addAudit('expense_add', `Despesa registrada: ${description} (${money(amountCents)}).`, 'Painel');
+      return entry;
+    },
 
     // calcula o frete a partir do texto do bairro digitado pelo cliente
     quoteDelivery(neighborhoodText){
