@@ -630,8 +630,8 @@
       <h4>Contato</h4>
       <ul>
         <li><a href="mailto:ola@justgrace.com.br">ola@justgrace.com.br</a></li>
-        <li><a href="#">Instagram @justgrace</a></li>
-        <li><a href="#">WhatsApp da loja</a></li>
+        <li><a href="https://instagram.com/justgraceoficial" target="_blank" rel="noopener">Instagram @justgraceoficial</a></li>
+        <li><a href="https://wa.me/5583993154363" target="_blank" rel="noopener">WhatsApp da loja</a></li>
       </ul>
     </div>
   </div>
@@ -1228,7 +1228,7 @@ document.getElementById('checkoutConfirmWhats').addEventListener('click', ()=>{
   const addr = `${data.address.street}, ${data.address.number} · ${data.address.neighborhood} · ${data.address.city}/${data.address.state}`;
   const message = `Olá! Quero confirmar o pedido ${order.id} na Just Grace:\n\n${productsList}\n\nFrete: ${feeText}\nTotal: ${totalText}\n\nNome: ${data.customerName}\nEndereço: ${addr}\n\nAcompanhar meu pedido: ${trackingUrl(order.id)}`;
   finishCheckoutUI(order);
-  window.open('https://wa.me/?text=' + encodeURIComponent(message), '_blank', 'noopener,noreferrer');
+  window.open('https://wa.me/5583993154363?text=' + encodeURIComponent(message), '_blank', 'noopener,noreferrer');
 });
 
 /* ---- pagamento online: PIX (gera código na hora) e Cartão (redireciona) ---- */
