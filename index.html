@@ -289,16 +289,17 @@
     animation-delay:.28s;
   }
   #siteIntro{
-    position:fixed; top:0; right:0; bottom:0; left:0;
-    width:100%; height:100vh; height:100dvh; z-index:99999;
+    position:fixed !important; top:0 !important; right:0 !important; bottom:0 !important; left:0 !important;
+    width:100vw !important; height:100vh !important; height:100dvh !important; z-index:2147483647;
     background: var(--void);
     overflow:hidden; margin:0; padding:0;
     transition: opacity .6s ease;
   }
   #siteIntro.is-hidden{ opacity:0; pointer-events:none; }
   #siteIntro video{
-    position:absolute; top:0; right:0; bottom:0; left:0;
-    width:100%; height:100%; object-fit:contain; display:block; margin:0; padding:0; background:var(--void);
+    position:absolute !important; top:0 !important; right:0 !important; bottom:0 !important; left:0 !important;
+    width:100% !important; height:100% !important; max-width:none; max-height:none;
+    object-fit:contain; object-position:center; display:block; margin:0; padding:0; background:var(--void);
   }
   #siteIntroSkip{
     position:fixed; right:20px; bottom:20px; z-index:100000;
@@ -549,7 +550,7 @@
 <body class="intro-active">
 
 <div id="siteIntro" aria-hidden="true">
-  <video autoplay muted playsinline preload="auto" disablepictureinpicture poster="logo-mark.jpg">
+  <video autoplay muted defaultMuted playsinline webkit-playsinline="true" disablepictureinpicture disableRemotePlayback preload="auto" poster="logo-mark.jpg" src="logo-animation.mp4">
     <source src="logo-animation.mp4" type="video/mp4">
   </video>
 </div>
@@ -577,7 +578,7 @@
 
 <section class="hero" id="topo">
   <div class="eyebrow">Moda católica autêntica</div>
-  <img class="hero-logo-img" src="logo-mark.jpg" alt="Just Grace - A graça de Deus basta">
+  <img class="hero-logo-img" src="logo-mark-transparent.png" alt="Just Grace - A graça de Deus basta">
   <h1>Não criamos uma estética para a fé.<br><span class="hero-line2">Criamos a partir <em>dela</em>.</span></h1>
   <p>Peças pensadas para quem carrega a devoção no dia a dia — da oração em silêncio à camiseta que anuncia o Evangelho sem dizer uma palavra.</p>
   <div class="hero-cta">
@@ -1422,6 +1423,9 @@ document.addEventListener('click', e=>{
     video.muted = true;
     video.defaultMuted = true;
     video.playsInline = true;
+    video.setAttribute('muted', '');
+    video.setAttribute('playsinline', '');
+    video.setAttribute('webkit-playsinline', '');
 
     const tryPlay = function(){
       const p = video.play();
@@ -1430,18 +1434,30 @@ document.addEventListener('click', e=>{
           // alguns navegadores/webviews só liberam o play após qualquer toque na tela;
           // isso NÃO exibe nenhum botão, apenas aproveita o primeiro toque do usuário
           const resume = function(){
+            video.muted = true;
             video.play().catch(function(){});
-            document.removeEventListener('touchstart', resume);
-            document.removeEventListener('click', resume);
+            document.removeEventListener('touchstart', resume, true);
+            document.removeEventListener('touchend', resume, true);
+            document.removeEventListener('click', resume, true);
+            document.removeEventListener('pointerdown', resume, true);
           };
-          document.addEventListener('touchstart', resume, {once:true, passive:true});
-          document.addEventListener('click', resume, {once:true});
+          document.addEventListener('touchstart', resume, {once:true, passive:true, capture:true});
+          document.addEventListener('touchend', resume, {once:true, passive:true, capture:true});
+          document.addEventListener('click', resume, {once:true, capture:true});
+          document.addEventListener('pointerdown', resume, {once:true, capture:true});
         });
       }
     };
     tryPlay();
     video.addEventListener('loadedmetadata', tryPlay);
+    video.addEventListener('loadeddata', tryPlay);
     video.addEventListener('canplay', tryPlay);
+    video.addEventListener('canplaythrough', tryPlay);
+    window.addEventListener('load', tryPlay);
+    document.addEventListener('DOMContentLoaded', tryPlay);
+    window.setTimeout(tryPlay, 50);
+    window.setTimeout(tryPlay, 300);
+    window.setTimeout(tryPlay, 800);
 
     video.addEventListener('ended', endIntro);
     // segurança: se o vídeo não carregar/tocar, libera a loja mesmo assim
