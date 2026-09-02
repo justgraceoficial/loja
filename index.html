@@ -291,12 +291,13 @@
   #siteIntro{
     position:fixed; inset:0; z-index:99999;
     background: var(--void);
-    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
     transition: opacity .6s ease;
   }
   #siteIntro.is-hidden{ opacity:0; pointer-events:none; }
   #siteIntro video{
-    width:min(320px, 60vw); height:auto; display:block;
+    position:absolute; inset:0;
+    width:100%; height:100%; object-fit:contain; display:block;
   }
   #siteIntroSkip{
     position:fixed; right:20px; bottom:20px; z-index:100000;
@@ -575,7 +576,7 @@
 
 <section class="hero" id="topo">
   <div class="eyebrow">Moda católica autêntica</div>
-  <img class="hero-logo-img" src="logo-mark.jpg" alt="Just Grace - A graça de Deus basta">
+  <img class="hero-logo-img" src="logo-mark.svg" alt="Just Grace - A graça de Deus basta">
   <h1>Não criamos uma estética para a fé.<br><span class="hero-line2">Criamos a partir <em>dela</em>.</span></h1>
   <p>Peças pensadas para quem carrega a devoção no dia a dia — da oração em silêncio à camiseta que anuncia o Evangelho sem dizer uma palavra.</p>
   <div class="hero-cta">
